@@ -1,14 +1,21 @@
 import json
+import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
-import openseespy.opensees as osp
+import openseespy.opensees as ops
 import os
 import polars as pl
 import pprint
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from polars import Int8, Float32, Float64, Boolean
+from polars import (Int8 as i8,
+                    Float32 as f32,
+                    Float64 as f64,
+                    Boolean,
+                    List)
+from pywin.mfc.object import Object
 
 from dataset.generation.analysis import *
 
@@ -174,7 +181,6 @@ class StructuralDatasetGenerator(ABC):
                 if (len(idx) == 0):
                     parameters[target] = value
                     continue
-
                 parameter = parameters[target]
                 for i in idx[:-1]:
                     parameter = parameters[i]
@@ -185,14 +191,14 @@ class StructuralDatasetGenerator(ABC):
     def get_K(self, ndof=2):
         '''Compute the global structure matrix'''
         # Parameters
-        nodes = np.array([osp.nodeCoord(i) for i in osp.getNodeTags()], dtype=int)
-        elems = np.array([osp.eleNodes(i) for i in osp.getEleTags()])
+        nodes = np.array([ops.nodeCoord(i) for i in ops.getNodeTags()], dtype=int)
+        elems = np.array([ops.eleNodes(i) for i in ops.getEleTags()])
 
         elems_vec = np.array([nodes[e] - nodes[s] for s, e in elems])
         elems_angle = np.array([np.arctan2(*v[::-1]) - np.arctan2(0, 1) for v in elems_vec])
 
         # Stiffness matrix
-        K = np.zeros((ndof * len(osp.getNodeTags()), ndof * len(osp.getNodeTags())))
+        K = np.zeros((ndof * len(ops.getNodeTags()), ndof * len(ops.getNodeTags())))
         for idx in range(len(elems)):
             # Get element stiffness matrix
             s_i, e_i = elems[idx] * ndof
@@ -209,7 +215,7 @@ class StructuralDatasetGenerator(ABC):
 
         # Boundary condition
         for idx in range(len(nodes)):
-            for i in osp.getFixedDOFs(idx):
+            for i in ops.getFixedDOFs(idx):
                 dof = ndof * idx + i - 1  # OSP indices starts at 1
 
                 K[dof, :] = 0.
@@ -237,7 +243,7 @@ class StructuralDatasetGenerator(ABC):
         with open(info_file, 'w') as f:
             json.dump(info, f, indent=4)
 
-        lf = pl.LazyFrame(self.__iter__(size), schema=self._type_schema)
+        lf = pl.LazyFrame(self.__iter__(size), schema=self._type_schema, infer_schema_length=None, nan_to_null=True)
         lf.sink_csv(csv_file, batch_size=1000)
 
     @staticmethod
@@ -272,6 +278,7 @@ class StructuralDatasetGenerator(ABC):
             'EXPONENTIAL_CONST': 1,
             'NORMAL_CONST': 2,
             'UNIFORM_CONST': 2,
+            'RANDOM_CHOICE': max(1, len(distribution['parameters'])), # At least 1 parameter
         }
 
         # Check if distribution is correctly encoded
@@ -388,6 +395,10 @@ class StructuralDatasetGenerator(ABC):
                 distribution_name, = distribution_parameters
                 return distribution_name
 
+            case 'RANDOM_CHOICE':
+                values = distribution_parameters
+                return lambda size: np.random.choice(values, size=size)
+
             case _:
                 raise ValueError(f"{distribution_type} is not supported.")
 
@@ -457,7 +468,7 @@ class PlanarTrussGenerator(StructuralDatasetGenerator):
 
     def _get_k_loc(self, idx):
         '''Compute the local element matrix'''
-        return osp.basicStiffness(idx) * np.array([[1, 0, -1, 0],
+        return ops.basicStiffness(idx) * np.array([[1, 0, -1, 0],
                                                    [0, 0, 0, 0],
                                                    [-1, 0, 1, 0],
                                                    [0, 0, 0, 0]])
@@ -505,6 +516,7 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
         """
         super().__init__(parameters)
 
+
         # If no parameters are provided, use the default configuration
         if parameters is None:
             parameters = {
@@ -521,28 +533,6 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
                     }
                 }
             }
-
-        # Type schema
-        # Generalize to fit the actual parametric data ! 
-        self._type_schema = {
-            'n_cells': Int8, 'cell_height': Float32, 'cell_length': Float32,
-            'x1': Float32, 'y1': Float32, 'x2': Float32, 'y2': Float32, 'x3': Float32, 'y3': Float32,
-            'x4': Float32, 'y4': Float32, 'x5': Float32, 'y5': Float32, 'x6': Float32, 'y6': Float32,
-            'fix_x1': Boolean, 'fix_y1': Boolean, 'fix_x2': Boolean, 'fix_y2': Boolean, 'fix_x3': Boolean,
-            'fix_y3': Boolean,
-            'fix_x4': Boolean, 'fix_y4': Boolean, 'fix_x5': Boolean, 'fix_y5': Boolean, 'fix_x6': Boolean,
-            'fix_y6': Boolean,
-            'P_x1': Float64, 'P_y1': Float64, 'P_x2': Float64, 'P_y2': Float64, 'P_x3': Float64, 'P_y3': Float64,
-            'P_x4': Float64, 'P_y4': Float64, 'P_x5': Float64, 'P_y5': Float64, 'P_x6': Float64, 'P_y6': Float64,
-            'E_1': Float64, 'E_2': Float64, 'E_3': Float64, 'E_4': Float64, 'E_5': Float64,
-            'E_6': Float64, 'E_7': Float64, 'E_8': Float64, 'E_9': Float64, 'E_10': Float64,
-            'A_1': Float32, 'A_2': Float32, 'A_3': Float32, 'A_4': Float32, 'A_5': Float32,
-            'A_6': Float32, 'A_7': Float32, 'A_8': Float32, 'A_9': Float32, 'A_10': Float32,
-            'u_x1': Float32, 'u_y1': Float32, 'u_x2': Float32, 'u_y2': Float32, 'u_x3': Float32, 'u_y3': Float32,
-            'u_x4': Float32, 'u_y4': Float32, 'u_x5': Float32, 'u_y5': Float32, 'u_x6': Float32, 'u_y6': Float32,
-            'N_1': Float32, 'N_2': Float32, 'N_3': Float32, 'N_4': Float32, 'N_5': Float32,
-            'N_6': Float32, 'N_7': Float32, 'N_8': Float32, 'N_9': Float32, 'N_10': Float32,
-        }
 
         # Initialize the parameters with default or provided values
         self._parameters = {
@@ -561,6 +551,7 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
         }
 
         # Validate and update parameters if provided
+
         if 'parameters' in parameters:
             for parameter_name in parameters['parameters'].keys():
                 match parameter_name:
@@ -587,10 +578,30 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
                             f"  -" + "\n  -".join(self._parameters['parameters'].keys())
                         )
 
+        if self._parameters['parameters']['cell_number']['default']['type'] not in ['CONSTANT', 'RANDOM_CHOICE']:
+            raise ValueError("Only CONSTANT and RANDOM_CHOICE are valid distributions for cell_number")
+
+        # Type schema
+        # Hypothesis: n_cells must be int so its either CONSTANT or RANDOM_CHOICE
+        max_n_cells = np.max(self._parameters['parameters']['cell_number']['default']['parameters'])
+
+        n_nodes = 2 * (max_n_cells + 1)
+        n_elems = 5 * max_n_cells
+
+        self._type_schema = {'n_cells': i8, 'cell_height': f32, 'cell_length': f32}
+        self._type_schema.update({f"K_{i}": f64 for i in range((self.ndof * max_n_cells)**2)})
+        self._type_schema.update({f"{d}_{i}": f32 for i in range(n_nodes) for d in ('x', 'y')})
+        self._type_schema.update({f"fix_{d}_{i}": Boolean for i in range(n_nodes) for d in ('x', 'y')})
+        self._type_schema.update({f"P_{d}_{i}": f64 for i in range(n_nodes) for d in ('x', 'y')})
+        self._type_schema.update({f"u_{d}_{i}": f32 for i in range(n_nodes) for d in ('x', 'y')})
+
+        self._type_schema.update({f"E_{i}": f64 for i in range(n_elems)})
+        self._type_schema.update({f"A_{i}": f32 for i in range(n_elems)})
+        self._type_schema.update({f"N_{i}": f32 for i in range(n_elems)})
+
         # Initialize generators for each parameter group
         parameters = self._parameters['parameters']
         group_distributions = self._parameters['distributions']
-
         self._generators = {
             param: {
                 'default': {
@@ -653,6 +664,8 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
         cell_number = int(self.generate_group_parameters(generators, 'cell_number', 1, values)[0])
         cell_length = float(self.generate_group_parameters(generators, 'cell_length', 1, values)[0])
         cell_height = float(self.generate_group_parameters(generators, 'cell_height', 1, values)[0])
+
+        self._max_n_cells = cell_number # Used to update the DB schema
 
         # Generate material and load parameters based on the number of cells
         areas = self.generate_group_parameters(generators, 'areas', 5 * cell_number, values, {'': []})
@@ -719,12 +732,12 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
             The model is automatically cleared before defining a new one.
         """
         # Clear any existing model in OpenSees
-        osp.wipe()
-        osp.model('basic', '-ndm', 2, '-ndf', 2)
+        ops.wipe()
+        ops.model('basic', '-ndm', 2, '-ndf', 2)
 
         ## Define materials in the model
         for tag, material in parameters['materials'].items():
-            osp.uniaxialMaterial('Elastic', tag, material['E'])
+            ops.uniaxialMaterial('Elastic', tag, material['E'])
 
         ## Geometry: Define nodes and elements based on cell configuration
         cell_number = parameters['cell_number']
@@ -733,8 +746,8 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
 
         ### Create nodes for each cell
         for i in range(cell_number + 1):
-            osp.node(2 * i, i * L, 0.5 * H)  # Upper node of the cell
-            osp.node(2 * i + 1, i * L, -0.5 * H)  # Lower node of the cell
+            ops.node(2 * i, i * L, 0.5 * H)  # Upper node of the cell
+            ops.node(2 * i + 1, i * L, -0.5 * H)  # Lower node of the cell
 
         ### Create truss elements (bars) between nodes
         bars_areas = parameters['bars_areas']
@@ -745,45 +758,45 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
             tag = i
             area = bars_areas[tag]
             material = bars_materials[tag]
-            osp.element("Truss", tag, *(2 * i, 2 + 2 * i), area, material)
+            ops.element("Truss", tag, *(2 * i, 2 + 2 * i), area, material)
 
         #### Bottom horizontal bars
         for i in range(cell_number):
             tag = cell_number + i
             area = bars_areas[tag]
             material = bars_materials[tag]
-            osp.element("Truss", tag, *(1 + 2 * i, 3 + 2 * i), area, material)
+            ops.element("Truss", tag, *(1 + 2 * i, 3 + 2 * i), area, material)
 
         #### Vertical bars
         for i in range(cell_number):
             tag = 2 * cell_number + i
             area = bars_areas[tag]
             material = bars_materials[tag]
-            osp.element("Truss", tag, *(2 * i + 2, 2 * i + 3), area, material)
+            ops.element("Truss", tag, *(2 * i + 2, 2 * i + 3), area, material)
 
         #### S-O to N-E diagonal bars
         for i in range(cell_number):
             tag = 3 * cell_number + 2 * i
             area = bars_areas[tag]
             material = bars_materials[tag]
-            osp.element("Truss", tag, *(2 * i, 2 * i + 3), area, material)
+            ops.element("Truss", tag, *(2 * i, 2 * i + 3), area, material)
 
         #### S-E to N-O diagonal bars
         for i in range(cell_number):
             tag = 3 * cell_number + 2 * i + 1
             area = bars_areas[tag]
             material = bars_materials[tag]
-            osp.element("Truss", tag, *(2 * i + 1, 2 * (i + 1)), area, material)
+            ops.element("Truss", tag, *(2 * i + 1, 2 * (i + 1)), area, material)
 
         ## Define boundary conditions (supports)
         for (idx, conditions) in parameters['supports'].items():
-            osp.fix(idx, bool(conditions['x']), bool(conditions['y']))
+            ops.fix(idx, bool(conditions['x']), bool(conditions['y']))
 
         ## Define loads
-        osp.timeSeries('Constant', 1)  # Define a constant time series for loading
-        osp.pattern("Plain", 1, 1)  # Define a plain load pattern
+        ops.timeSeries('Constant', 1)  # Define a constant time series for loading
+        ops.pattern("Plain", 1, 1)  # Define a plain load pattern
         for (idx, load) in parameters['nodes_loads'].items():
-            osp.load(idx, float(load['x']), float(load['y']))  # Apply loads to nodes
+            ops.load(idx, float(load['x']), float(load['y']))  # Apply loads to nodes
 
     def __iter__(self, max_count=-1):
         """
@@ -809,15 +822,34 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
 
             n_cell = parameters['cell_number']
 
-            row = [parameters['cell_number'], parameters['cell_height'], parameters['cell_length']]
-            row += [osp.nodeCoord(i)[d] for i in range(2 * n_cell + 2) for d in [0, 1]]  # Nodes locations
-            row += [parameters['supports'][i][d] for i in range(2 * n_cell + 2) for d in ['x', 'y']]  # Support
-            row += [parameters['nodes_loads'][i][d] for i in range(2 * n_cell + 2) for d in
-                    ['x', 'y']]  # Loads on nodes
-            row += [parameters['materials'][i]['E'] for i in range(5 * n_cell)]  # Young modulus
-            row += [parameters['bars_areas'][i] for i in range(5 * n_cell)]  # Areas
-            row += [u_i for tag in osp.getNodeTags() for u_i in osp.nodeDisp(tag)]  # Node displacement
-            row += [n_i for tag in osp.getEleTags() for n_i in osp.eleResponse(tag, "basicForce")]  # Elements forces
+            row = {'n_cells': parameters['cell_number'],
+                   'cell_height': parameters['cell_height'],
+                   'cell_length': parameters['cell_length']}
+            row.update({f"x_{i}": ops.nodeCoord(i)[0] for i in range(2 * n_cell + 2)})
+
+            row.update({f"y_{i}": ops.nodeCoord(i)[1] for i in range(2 * n_cell + 2)})
+            row.update({f"fix_{d}_{i}": parameters['supports'][i][d]
+                        for i in range(2 * n_cell + 2)
+                        for d in ['x', 'y']})
+            row.update({f"P_{d}_{i}": parameters['nodes_loads'][i][d]
+                        for i in range(2 * n_cell + 2)
+                        for d in ['x', 'y']})
+            row.update({f"E_{i}": parameters['materials'][i]['E'] for i in range(5*n_cell)})
+            row.update({f"A_{i}": parameters['bars_areas'][i] for i in range(5*n_cell)})
+            row.update({f"u_x_{i}": ops.nodeDisp(i)[0] for i in range(2 * n_cell + 2)})
+            row.update({f"u_y_{i}": ops.nodeDisp(i)[1] for i in range(2 * n_cell + 2)})
+            row.update({f"N_{i}": ops.eleResponse(i, "basicForce")[0] for i in range(5 * n_cell)})
+            row.update({f"K_{i}": K_i for i, K_i in enumerate(self.get_K(self.ndof).flatten())})
+
+            # row =  [parameters['cell_number'], parameters['cell_height'], parameters['cell_length']]
+            # row += [ops.nodeCoord(i)[d] for i in range(2 * n_cell + 2) for d in [0, 1]]  # Nodes locations
+            # row += [parameters['supports'][i][d] for i in range(2 * n_cell + 2) for d in ['x', 'y']]  # Support
+            # row += [parameters['nodes_loads'][i][d] for i in range(2 * n_cell + 2) for d in
+            #         ['x', 'y']]  # Loads on nodes
+            # row += [parameters['materials'][i]['E'] for i in range(5 * n_cell)]  # Young modulus
+            # row += [parameters['bars_areas'][i] for i in range(5 * n_cell)]  # Areas
+            # row += [u_i for tag in ops.getNodeTags() for u_i in ops.nodeDisp(tag)]  # Node displacement
+            # row += [n_i for tag in ops.getEleTags() for n_i in ops.eleResponse(tag, "basicForce")]  # Elements forces
 
             yield row
 
@@ -877,16 +909,19 @@ class LinearTwoBarTruss(PlanarTrussGenerator, LinearAnalysis):
 
         # Type schema
         # Generalize to fit the actual parametric data !
-        self._type_schema = {
-            'height': Float32, 'length': Float32,
-            'x1': Float32, 'y1': Float32, 'x2': Float32, 'y2': Float32, 'x3': Float32, 'y3': Float32,
-            'fix_x1': Boolean, 'fix_y1': Boolean, 'fix_x2': Boolean, 'fix_y2': Boolean, 'fix_x3': Boolean,
-            'fix_y3': Boolean,
-            'P_x1': Float64, 'P_y1': Float64, 'P_x2': Float64, 'P_y2': Float64, 'P_x3': Float64, 'P_y3': Float64,
-            'E_1': Float64, 'E_2': Float64, 'A_1': Float32, 'A_2': Float32,
-            'u_x1': Float32, 'u_y1': Float32, 'u_x2': Float32, 'u_y2': Float32, 'u_x3': Float32, 'u_y3': Float32,
-            'N_1': Float32, 'N_2': Float32
-        }
+        self._type_schema = {'height': f32, 'length': f32}
+        self._type_schema.update({f'x_{i}': f32 for i in range(3)})
+        self._type_schema.update({f'y_{i}': f32 for i in range(3)})
+        self._type_schema.update({f'fix_x_{i}': Boolean for i in range(3)})
+        self._type_schema.update({f'fix_y_{i}': Boolean for i in range(3)})
+        self._type_schema.update({f'P_x_{i}': f64 for i in range(3)})
+        self._type_schema.update({f'P_y_{i}': f64 for i in range(3)})
+        self._type_schema.update({f'u_x_{i}': f32 for i in range(3)})
+        self._type_schema.update({f'u_y_{i}': f32 for i in range(3)})
+        self._type_schema.update({f'E_{i}': f64 for i in range(2)})
+        self._type_schema.update({f'A_{i}': f32 for i in range(2)})
+        self._type_schema.update({f'N_{i}': f64 for i in range(2)})
+        self._type_schema.update({f'K_{i}': f64 for i in range((3*self.ndof)**2)})
 
         # Initialize the parameters with default or provided values
         self._parameters = {
@@ -1056,40 +1091,40 @@ class LinearTwoBarTruss(PlanarTrussGenerator, LinearAnalysis):
             The model is automatically cleared before defining a new one.
         """
         # Clear any existing model in OpenSees
-        osp.wipe()
-        osp.model('basic', '-ndm', 2, '-ndf', 2)
+        ops.wipe()
+        ops.model('basic', '-ndm', 2, '-ndf', 2)
 
         ## Define materials in the model
         for tag, material in parameters['materials'].items():
-            osp.uniaxialMaterial('Elastic', tag, material['E'])
+            ops.uniaxialMaterial('Elastic', tag, material['E'])
 
         ## Geometry: Define nodes and elements based on cell configuration
         L = float(parameters['length'])  # Cell length
         H = float(parameters['height'])  # Cell height
 
         ### Create nodes
-        osp.node(0, 0, H)
-        osp.node(1, 0, 0)
-        osp.node(2, L, H)
+        ops.node(0, 0, H)
+        ops.node(1, 0, 0)
+        ops.node(2, L, H)
 
         ### Create truss elements (bars) between nodes
         bars_areas = parameters['bars_areas']
         bars_materials = parameters['bars_materials']
 
         # Bars
-        osp.element('Truss', 0, *(0, 2), bars_areas[0], bars_materials[0])
-        osp.element('Truss', 1, *(1, 2), bars_areas[1], bars_materials[1])
+        ops.element('Truss', 0, *(0, 2), bars_areas[0], bars_materials[0])
+        ops.element('Truss', 1, *(1, 2), bars_areas[1], bars_materials[1])
 
         ## Define boundary conditions (supports)
-        osp.fix(0, True, True)
-        osp.fix(1, True, True)
+        ops.fix(0, True, True)
+        ops.fix(1, True, True)
 
         ## Define loads
-        osp.timeSeries('Constant', 1)  # Define a constant time series for loading
-        osp.pattern("Plain", 1, 1)  # Define a plain load pattern
+        ops.timeSeries('Constant', 1)  # Define a constant time series for loading
+        ops.pattern("Plain", 1, 1)  # Define a plain load pattern
 
         for (idx, load) in parameters['nodes_loads'].items():
-            osp.load(idx, float(load['x']), float(load['y']))  # Apply loads to nodes
+            ops.load(idx, float(load['x']), float(load['y']))  # Apply loads to nodes
 
     def __iter__(self, max_count=-1):
         """
@@ -1113,15 +1148,19 @@ class LinearTwoBarTruss(PlanarTrussGenerator, LinearAnalysis):
 
             self.run_analysis()
 
-            row = [parameters['height'], parameters['length']]
-            row += [osp.nodeCoord(i)[d] for i in range(3) for d in [0, 1]]  # Nodes locations
-            row += [parameters['supports'][i][d] for i in range(3) for d in ['x', 'y']]  # Support
-            row += [parameters['nodes_loads'][i][d] for i in range(3) for d in
-                    ['x', 'y']]  # Loads on nodes
-            row += [parameters['materials'][i]['E'] for i in range(2)]  # Young modulus
-            row += [parameters['bars_areas'][i] for i in range(2)]  # Areas
-            row += [u_i for tag in osp.getNodeTags() for u_i in osp.nodeDisp(tag)]  # Node displacement
-            row += [n_i for tag in osp.getEleTags() for n_i in osp.eleResponse(tag, "basicForce")]  # Elements forces
+            row = {'height': parameters['height'], 'length': parameters['length']}
+            row.update({f'x_{i}': ops.nodeCoord(i)[0] for i in range(3)})
+            row.update({f'y_{i}': ops.nodeCoord(i)[1] for i in range(3)})
+            row.update({f'fix_x_{i}': parameters['supports'][i]['x'] for i in range(3)})
+            row.update({f'fix_y_{i}': parameters['supports'][i]['y'] for i in range(3)})
+            row.update({f'P_x_{i}': parameters['nodes_loads'][i]['x'] for i in range(3)})
+            row.update({f'P_y_{i}': parameters['nodes_loads'][i]['y'] for i in range(3)})
+            row.update({f'E_{i}': parameters['materials'][i]['E'] for i in range(2)})
+            row.update({f'A_{i}': parameters['bars_areas'][i] for i in range(2)})
+            row.update({f'u_x_{i}': ops.nodeDisp(i)[0] for i in range(3)})
+            row.update({f'u_y_{i}': ops.nodeDisp(i)[1] for i in range(3)})
+            row.update({f'N_{i}': ops.basicForce(i)[0] for i in range(2)})
+            row.update({f'K_{i}': K_i for i, K_i in enumerate(self.get_K(self.ndof).flatten())})
 
             yield row
 

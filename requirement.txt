@@ -1,0 +1,8 @@
+matplotlib>=3.9
+numpy>=1.26,<2.0
+openseespy==3.7
+pandas>=2.2,<3.0
+polars>=1.9,<2.0
+scikit-learn>=1.5,<2.0
+torch>=2.4,<3.0
+vfo==0.0.19
