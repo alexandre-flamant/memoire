@@ -113,7 +113,8 @@ class StructuralDatasetGenerator(ABC):
         return f"{self._parameters['name']} dataset generator"
 
     @abstractmethod
-    def __iter__(self, size=None): pass
+    def __iter__(self, size=None):
+        pass
 
     @staticmethod
     def generate_group_parameters(generators, group, group_size, values, code_map=None):
@@ -217,7 +218,10 @@ class StructuralDatasetGenerator(ABC):
 
         return K
 
-    def save(self, dirname, size=100):
+    def save(self, dirname=None, size=100):
+        if dirname is None:
+            dirname = f"./dataset/{self.__class__.__name__}/{datetime.now().strftime("%Y%m%d_%H%M%S")}"
+
         os.makedirs(dirname, exist_ok=True)
 
         info_file = os.path.dirname(dirname + '/') + "/info.json"
@@ -464,7 +468,7 @@ class PlanarTrussGenerator(StructuralDatasetGenerator):
         return r.T @ k_loc @ r
 
 
-class LinearCanteliverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
+class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
     """
     LinearTrussGenerator is a specialized DatasetGenerator for creating linear truss
     structures with a cross pattern. It defines specific parameters, distributions, and
@@ -506,14 +510,14 @@ class LinearCanteliverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
             parameters = {
                 'parameters': {
                     'supports': {
+                        '0-x': {'type': 'CONSTANT', 'parameters': (1,)},
+                        '0-y': {'type': 'CONSTANT', 'parameters': (1,)},
                         '1-x': {'type': 'CONSTANT', 'parameters': (1,)},
                         '1-y': {'type': 'CONSTANT', 'parameters': (1,)},
-                        '2-x': {'type': 'CONSTANT', 'parameters': (1,)},
-                        '2-y': {'type': 'CONSTANT', 'parameters': (1,)},
                     },
                     'loads': {
-                        '4-y': {'type': 'CONSTANT', 'parameters': (-100.e3,)},
-                        '6-y': {'type': 'CONSTANT', 'parameters': (-100.e3,)},
+                        '3-y': {'type': 'CONSTANT', 'parameters': (-100.e3,)},
+                        '5-y': {'type': 'CONSTANT', 'parameters': (-100.e3,)},
                     }
                 }
             }
@@ -818,8 +822,313 @@ class LinearCanteliverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
             yield row
 
 
+class LinearTwoBarTruss(PlanarTrussGenerator, LinearAnalysis):
+    """
+    LinearTrussGenerator is a specialized DatasetGenerator for creating linear truss
+    structures with a cross pattern. It defines specific parameters, distributions, and
+    methods relevant to truss models, enabling the generation and analysis of multiple
+    truss configurations.
+    """
+
+    def __init__(self, parameters=None):
+        """
+        Initializes the LinearTrussGenerator with default or provided parameters.
+
+        :param parameters (dict, optional):
+            A dictionary containing the configuration for the truss generator.
+            If not provided, default parameters are used.
+
+            Default structure:
+            {
+                'parameters': {
+                    'supports': {
+                        '1-x': {'type': 'CONSTANT', 'parameters': (1,)},
+                        '1-y': {'type': 'CONSTANT', 'parameters': (1,)},
+                        '2-x': {'type': 'CONSTANT', 'parameters': (1,)},
+                        '2-y': {'type': 'CONSTANT', 'parameters': (1,)},
+                    },
+                    'loads': {
+                        '4-y': {'type': 'CONSTANT', 'parameters': (-100e3,)},
+                        '6-y': {'type': 'CONSTANT', 'parameters': (-100e3,)},
+                    }
+                }
+            }
+
+        :raises ValueError:
+            If any provided parameter name is invalid or distributions are improperly defined.
+        """
+        super().__init__(parameters)
+
+        # If no parameters are provided, use the default configuration
+        if parameters is None:
+            parameters = {
+                'parameters': {
+                    'supports': {
+                        '0-x': {'type': 'CONSTANT', 'parameters': (1,)},
+                        '0-y': {'type': 'CONSTANT', 'parameters': (1,)},
+                        '1-x': {'type': 'CONSTANT', 'parameters': (1,)},
+                        '1-y': {'type': 'CONSTANT', 'parameters': (1,)},
+                    },
+                    'loads': {
+                        '2-y': {'type': 'CONSTANT', 'parameters': (-100.e3,)},
+                    }
+                }
+            }
+
+        # Type schema
+        # Generalize to fit the actual parametric data !
+        self._type_schema = {
+            'height': Float32, 'length': Float32,
+            'x1': Float32, 'y1': Float32, 'x2': Float32, 'y2': Float32, 'x3': Float32, 'y3': Float32,
+            'fix_x1': Boolean, 'fix_y1': Boolean, 'fix_x2': Boolean, 'fix_y2': Boolean, 'fix_x3': Boolean,
+            'fix_y3': Boolean,
+            'P_x1': Float64, 'P_y1': Float64, 'P_x2': Float64, 'P_y2': Float64, 'P_x3': Float64, 'P_y3': Float64,
+            'E_1': Float64, 'E_2': Float64, 'A_1': Float32, 'A_2': Float32,
+            'u_x1': Float32, 'u_y1': Float32, 'u_x2': Float32, 'u_y2': Float32, 'u_x3': Float32, 'u_y3': Float32,
+            'N_1': Float32, 'N_2': Float32
+        }
+
+        # Initialize the parameters with default or provided values
+        self._parameters = {
+            'name': "Linear cantilever's cross pattern beam" if not self._parameters['name'] else self._parameters[
+                'name'],
+            'parameters': {  # UNIT
+                'length': {'default': {'type': 'CONSTANT', 'parameters': (4.,)}},  # Length of each cell (meters)
+                'height': {'default': {'type': 'CONSTANT', 'parameters': (4.,)}},  # Height of each cell (meters)
+                'supports': {'default': {'type': 'CONSTANT', 'parameters': (0,)}},  # Support conditions
+                'youngs': {'default': {'type': 'CONSTANT', 'parameters': (200.e9,)}},  # Young's modulus (N/m²)
+                'areas': {'default': {'type': 'CONSTANT', 'parameters': (1.e-2,)}},  # Cross-sectional areas (m²)
+                'loads': {'default': {'type': 'CONSTANT', 'parameters': (0.,)}}  # Applied loads (N)
+            },
+            'distributions': self._parameters['distributions']  # Inherit distributions from the parent class
+        }
+
+        # Validate and update parameters if provided
+        if 'parameters' in parameters:
+            for parameter_name in parameters['parameters'].keys():
+                match parameter_name:
+                    case 'areas' | 'loads' | 'youngs' | 'supports' | 'length' | 'height':
+                        # Define specific validators based on parameter type
+                        match parameter_name:
+                            case 'areas' | 'youngs':
+                                validator = lambda code: (len(code) == 0)  # No additional codes expected
+                            case 'loads' | 'supports':
+                                validator = lambda code: (len(code) == 1) and (
+                                        code[0] in ('x', 'y'))  # Single direction
+                            case 'length' | 'height':
+                                validator = None  # No additional validation required
+
+                        # Validate the distribution group for the parameter
+                        self._check_distributions_group(parameters['parameters'][parameter_name], validator)
+                        # Update the default parameters with user-provided configurations
+                        self._parameters['parameters'][parameter_name].update(parameters['parameters'][parameter_name])
+                    case _:
+                        # Raise an error if an invalid parameter name is provided
+                        raise ValueError(
+                            f"\"{parameter_name}\" is not a valid parameter name. " +
+                            "Choose from:\n" +
+                            f"  -" + "\n  -".join(self._parameters['parameters'].keys())
+                        )
+
+        # Initialize generators for each parameter group
+        parameters = self._parameters['parameters']
+        group_distributions = self._parameters['distributions']
+
+        self._generators = {
+            param: {
+                'default': {
+                    'generator': self._get_partial_generator(parameters[param]['default']),
+                    'targets': set()
+                }
+            }
+            for param in parameters.keys()
+        }
+
+        # Parse and assign additional generators based on distributions
+        for group in parameters.keys():
+            self._generators = self._parse_group_generators(self._generators, group)
+
+    def generate_parameters(self, generators):
+        """
+        Generates a complete set of parameters for the truss structure using the defined generators.
+
+        :param generators (dict):
+            Dictionary containing generator functions for each parameter group.
+
+        :return (dict):
+            A dictionary containing all generated parameters necessary to define the truss structure.
+            Structure:
+            {
+                'cell_length': float,
+                'cell_height': float,
+                'cell_number': int,
+                'materials': {
+                    1: {'E': float},
+                    2: {'E': float},
+                    ...
+                },
+                'bars_materials': {
+                    1: int,
+                    2: int,
+                    ...
+                },
+                'bars_areas': {
+                    1: float,
+                    2: float,
+                    ...
+                },
+                'nodes_loads': {
+                    1: {'x': float, 'y': float},
+                    2: {'x': float, 'y': float},
+                    ...
+                },
+                'supports': {
+                    1: {'x': int, 'y': int},
+                    2: {'x': int, 'y': int},
+                    ...
+                }
+            }
+        """
+        # Dictionary to store generated values
+        values = {}
+
+        # Generate basic structural parameters
+        length = float(self.generate_group_parameters(generators, 'length', 1, values)[0])
+        height = float(self.generate_group_parameters(generators, 'height', 1, values)[0])
+
+        # Generate material and load parameters based on the number of cells
+        areas = self.generate_group_parameters(generators, 'areas', 2, values, {'': []})
+        youngs = self.generate_group_parameters(generators, 'youngs', 2, values, {'': []})
+        loads = self.generate_group_parameters(generators, 'loads', (3, 2), values,
+                                               {'x': [0], 'y': [1]})
+        supports = self.generate_group_parameters(generators, 'supports', (3, 2), values,
+                                                  {'x': [0], 'y': [1]})
+
+        # Assemble all generated parameters into a structured dictionary
+        return {
+            'length': length,
+            'height': height,
+            'materials': {i: {'E': youngs[i]} for i in range(2)},  # Material properties for each element
+            'bars_materials': {i: i for i in range(2)},  # Mapping of bars to materials
+            'bars_areas': {i: areas[i] for i in range(2)},  # Cross-sectional areas for each bar
+            'nodes_loads': {i: {'x': loads[i][0], 'y': loads[i][1]} for i in range(3)},
+            # Loads applied to nodes
+            'supports': {i: {'x': supports[i][0], 'y': supports[i][1]} for i in range(3)},
+            # Support conditions for nodes
+        }
+
+    @staticmethod
+    def initialize_truss(parameters):
+        """
+        Initializes and defines the truss model in OpenSees based on the provided parameters.
+
+        :param parameters (dict):
+            A dictionary containing all necessary parameters to define the truss structure.
+            Structure:
+            {
+                'length': float,
+                'height': float,
+                'materials': {
+                    1: {'E': float},
+                    2: {'E': float}
+                },
+                'bars_materials': {
+                    1: int,
+                    2: int
+                },
+                'bars_areas': {
+                    1: float,
+                    2: float
+                },
+                'nodes_loads': {
+                    1: {'x': float, 'y': float},
+                    2: {'x': float, 'y': float},
+                    3: {'x': float, 'y': float}
+                },
+                'supports': {
+                    1: {'x': int, 'y': int},
+                    2: {'x': int, 'y': int},
+                    3: {'x': int, 'y': int}
+                }
+            }
+
+        :note:
+            The model is automatically cleared before defining a new one.
+        """
+        # Clear any existing model in OpenSees
+        osp.wipe()
+        osp.model('basic', '-ndm', 2, '-ndf', 2)
+
+        ## Define materials in the model
+        for tag, material in parameters['materials'].items():
+            osp.uniaxialMaterial('Elastic', tag, material['E'])
+
+        ## Geometry: Define nodes and elements based on cell configuration
+        L = float(parameters['length'])  # Cell length
+        H = float(parameters['height'])  # Cell height
+
+        ### Create nodes
+        osp.node(0, 0, H)
+        osp.node(1, 0, 0)
+        osp.node(2, L, H)
+
+        ### Create truss elements (bars) between nodes
+        bars_areas = parameters['bars_areas']
+        bars_materials = parameters['bars_materials']
+
+        # Bars
+        osp.element('Truss', 0, *(0, 2), bars_areas[0], bars_materials[0])
+        osp.element('Truss', 1, *(1, 2), bars_areas[1], bars_materials[1])
+
+        ## Define boundary conditions (supports)
+        osp.fix(0, True, True)
+        osp.fix(1, True, True)
+
+        ## Define loads
+        osp.timeSeries('Constant', 1)  # Define a constant time series for loading
+        osp.pattern("Plain", 1, 1)  # Define a plain load pattern
+
+        for (idx, load) in parameters['nodes_loads'].items():
+            osp.load(idx, float(load['x']), float(load['y']))  # Apply loads to nodes
+
+    def __iter__(self, max_count=-1):
+        """
+        Creates an iterator that generates and analyzes truss structures using OpenSees.
+
+        :param max_count (int, optional):
+            The maximum number of structures to generate and analyze.
+            If set to -1, the iterator is infinite. Defaults to -1.
+
+        :yield (list):
+            A list of basic force responses from each element in the truss structure.
+        """
+        # Initialize counter
+        i = 0
+        while i != max_count:
+            i += 1
+            # Generate a set of parameters for the truss structure
+            parameters = self.generate_parameters(self._generators)
+            # Initialize the truss model in OpenSees with the generated parameters
+            self.initialize_truss(parameters)
+
+            self.run_analysis()
+
+            row = [parameters['height'], parameters['length']]
+            row += [osp.nodeCoord(i)[d] for i in range(3) for d in [0, 1]]  # Nodes locations
+            row += [parameters['supports'][i][d] for i in range(3) for d in ['x', 'y']]  # Support
+            row += [parameters['nodes_loads'][i][d] for i in range(3) for d in
+                    ['x', 'y']]  # Loads on nodes
+            row += [parameters['materials'][i]['E'] for i in range(2)]  # Young modulus
+            row += [parameters['bars_areas'][i] for i in range(2)]  # Areas
+            row += [u_i for tag in osp.getNodeTags() for u_i in osp.nodeDisp(tag)]  # Node displacement
+            row += [n_i for tag in osp.getEleTags() for n_i in osp.eleResponse(tag, "basicForce")]  # Elements forces
+
+            yield row
+
+
 __all__ = [
     "StructuralDatasetGenerator",
     "PlanarTrussGenerator",
-    "LinearCanteliverTrussGenerator",
+    "LinearCantileverTrussGenerator",
+    "LinearTwoBarTruss"
 ]
