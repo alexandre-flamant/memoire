@@ -15,7 +15,6 @@ from polars import (Int8 as i8,
                     Float64 as f64,
                     Boolean,
                     List)
-from pywin.mfc.object import Object
 
 from dataset.generation.analysis import *
 
@@ -278,7 +277,7 @@ class StructuralDatasetGenerator(ABC):
             'EXPONENTIAL_CONST': 1,
             'NORMAL_CONST': 2,
             'UNIFORM_CONST': 2,
-            'RANDOM_CHOICE': max(1, len(distribution['parameters'])), # At least 1 parameter
+            'RANDOM_CHOICE': max(1, len(distribution['parameters'])),  # At least 1 parameter
         }
 
         # Check if distribution is correctly encoded
@@ -461,10 +460,10 @@ class PlanarTrussGenerator(StructuralDatasetGenerator):
         '''Compute member rotation matrix'''
         c = np.cos(a)
         s = np.sin(a)
-        return np.array([[c, s, 0, 0],
-                         [-s, c, 0, 0],
-                         [0, 0, c, s],
-                         [0, 0, -s, c]])
+        return np.array([[c, -s, 0, 0],
+                         [s, c, 0, 0],
+                         [0, 0, c, -s],
+                         [0, 0, s, c]])
 
     def _get_k_loc(self, idx):
         '''Compute the local element matrix'''
@@ -515,7 +514,6 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
             If any provided parameter name is invalid or distributions are improperly defined.
         """
         super().__init__(parameters)
-
 
         # If no parameters are provided, use the default configuration
         if parameters is None:
@@ -587,9 +585,8 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
 
         n_nodes = 2 * (max_n_cells + 1)
         n_elems = 5 * max_n_cells
-
         self._type_schema = {'n_cells': i8, 'cell_height': f32, 'cell_length': f32}
-        self._type_schema.update({f"K_{i}": f64 for i in range((self.ndof * max_n_cells)**2)})
+        self._type_schema.update({f"K_{i}": f64 for i in range((self.ndof * 2 * (max_n_cells + 1)) ** 2)})
         self._type_schema.update({f"{d}_{i}": f32 for i in range(n_nodes) for d in ('x', 'y')})
         self._type_schema.update({f"fix_{d}_{i}": Boolean for i in range(n_nodes) for d in ('x', 'y')})
         self._type_schema.update({f"P_{d}_{i}": f64 for i in range(n_nodes) for d in ('x', 'y')})
@@ -665,7 +662,7 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
         cell_length = float(self.generate_group_parameters(generators, 'cell_length', 1, values)[0])
         cell_height = float(self.generate_group_parameters(generators, 'cell_height', 1, values)[0])
 
-        self._max_n_cells = cell_number # Used to update the DB schema
+        self._max_n_cells = cell_number  # Used to update the DB schema
 
         # Generate material and load parameters based on the number of cells
         areas = self.generate_group_parameters(generators, 'areas', 5 * cell_number, values, {'': []})
@@ -834,22 +831,12 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
             row.update({f"P_{d}_{i}": parameters['nodes_loads'][i][d]
                         for i in range(2 * n_cell + 2)
                         for d in ['x', 'y']})
-            row.update({f"E_{i}": parameters['materials'][i]['E'] for i in range(5*n_cell)})
-            row.update({f"A_{i}": parameters['bars_areas'][i] for i in range(5*n_cell)})
+            row.update({f"E_{i}": parameters['materials'][i]['E'] for i in range(5 * n_cell)})
+            row.update({f"A_{i}": parameters['bars_areas'][i] for i in range(5 * n_cell)})
             row.update({f"u_x_{i}": ops.nodeDisp(i)[0] for i in range(2 * n_cell + 2)})
             row.update({f"u_y_{i}": ops.nodeDisp(i)[1] for i in range(2 * n_cell + 2)})
             row.update({f"N_{i}": ops.eleResponse(i, "basicForce")[0] for i in range(5 * n_cell)})
             row.update({f"K_{i}": K_i for i, K_i in enumerate(self.get_K(self.ndof).flatten())})
-
-            # row =  [parameters['cell_number'], parameters['cell_height'], parameters['cell_length']]
-            # row += [ops.nodeCoord(i)[d] for i in range(2 * n_cell + 2) for d in [0, 1]]  # Nodes locations
-            # row += [parameters['supports'][i][d] for i in range(2 * n_cell + 2) for d in ['x', 'y']]  # Support
-            # row += [parameters['nodes_loads'][i][d] for i in range(2 * n_cell + 2) for d in
-            #         ['x', 'y']]  # Loads on nodes
-            # row += [parameters['materials'][i]['E'] for i in range(5 * n_cell)]  # Young modulus
-            # row += [parameters['bars_areas'][i] for i in range(5 * n_cell)]  # Areas
-            # row += [u_i for tag in ops.getNodeTags() for u_i in ops.nodeDisp(tag)]  # Node displacement
-            # row += [n_i for tag in ops.getEleTags() for n_i in ops.eleResponse(tag, "basicForce")]  # Elements forces
 
             yield row
 
@@ -921,7 +908,7 @@ class LinearTwoBarTruss(PlanarTrussGenerator, LinearAnalysis):
         self._type_schema.update({f'E_{i}': f64 for i in range(2)})
         self._type_schema.update({f'A_{i}': f32 for i in range(2)})
         self._type_schema.update({f'N_{i}': f64 for i in range(2)})
-        self._type_schema.update({f'K_{i}': f64 for i in range((3*self.ndof)**2)})
+        self._type_schema.update({f'K_{i}': f64 for i in range((3 * self.ndof) ** 2)})
 
         # Initialize the parameters with default or provided values
         self._parameters = {
