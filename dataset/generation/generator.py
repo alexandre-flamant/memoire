@@ -1,22 +1,18 @@
 import json
-import sys
 
-import matplotlib.pyplot as plt
 import numpy as np
 import openseespy.opensees as ops
 import os
 import polars as pl
-import pprint
 
 from abc import ABC, abstractmethod
 from datetime import datetime
 from polars import (Int8 as i8,
                     Float32 as f32,
                     Float64 as f64,
-                    Boolean,
-                    List)
+                    Boolean)
 
-from dataset.generation.analysis import *
+from structure.analysis import *
 
 np.set_printoptions(threshold=np.inf)
 np.set_printoptions(linewidth=np.inf)
@@ -59,7 +55,7 @@ class StructuralDatasetGenerator(ABC):
                     }
                 }
 
-            The name field contains the name of the structure typology.
+            The name field contains the name of the structural typology.
             The parameters field contains a collection of dictionaries stored with a key
             named after the parameter name. These dictionaries need to be encoded according
             to the following:
@@ -188,7 +184,7 @@ class StructuralDatasetGenerator(ABC):
         return parameters
 
     def get_K(self, ndof=2):
-        '''Compute the global structure matrix'''
+        '''Compute the global structural matrix'''
         # Parameters
         nodes = np.array([ops.nodeCoord(i) for i in ops.getNodeTags()], dtype=int)
         elems = np.array([ops.eleNodes(i) for i in ops.getEleTags()])
@@ -248,7 +244,7 @@ class StructuralDatasetGenerator(ABC):
     @staticmethod
     def _check_distribution(distribution):
         """
-        Validates the structure and parameters of a distribution.
+        Validates the structural and parameters of a distribution.
 
         :param distribution (dict):
             A dictionary defining the distribution with keys 'type' and 'parameters'.
@@ -460,10 +456,10 @@ class PlanarTrussGenerator(StructuralDatasetGenerator):
         '''Compute member rotation matrix'''
         c = np.cos(a)
         s = np.sin(a)
-        return np.array([[c, -s, 0, 0],
-                         [s, c, 0, 0],
-                         [0, 0, c, -s],
-                         [0, 0, s, c]])
+        return np.array([[c, s, 0, 0],
+                         [-s, c, 0, 0],
+                         [0, 0, c, s],
+                         [0, 0, -s, c]])
 
     def _get_k_loc(self, idx):
         '''Compute the local element matrix'''
@@ -494,7 +490,7 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
             A dictionary containing the configuration for the truss generator.
             If not provided, default parameters are used.
 
-            Default structure:
+            Default structural:
             {
                 'parameters': {
                     'supports': {
@@ -615,13 +611,13 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
 
     def generate_parameters(self, generators):
         """
-        Generates a complete set of parameters for the truss structure using the defined generators.
+        Generates a complete set of parameters for the truss structural using the defined generators.
 
         :param generators (dict):
             Dictionary containing generator functions for each parameter group.
 
         :return (dict):
-            A dictionary containing all generated parameters necessary to define the truss structure.
+            A dictionary containing all generated parameters necessary to define the truss structural.
             Structure:
             {
                 'cell_length': float,
@@ -692,7 +688,7 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
         Initializes and defines the truss model in OpenSees based on the provided parameters.
 
         :param parameters (dict):
-            A dictionary containing all necessary parameters to define the truss structure.
+            A dictionary containing all necessary parameters to define the truss structural.
             Structure:
             {
                 'cell_length': float,
@@ -804,13 +800,13 @@ class LinearCantileverTrussGenerator(PlanarTrussGenerator, LinearAnalysis):
             If set to -1, the iterator is infinite. Defaults to -1.
 
         :yield (list):
-            A list of basic force responses from each element in the truss structure.
+            A list of basic force responses from each element in the truss structural.
         """
         # Initialize counter
         i = 0
         while i != max_count:
             i += 1
-            # Generate a set of parameters for the truss structure
+            # Generate a set of parameters for the truss structural
             parameters = self.generate_parameters(self._generators)
             # Initialize the truss model in OpenSees with the generated parameters
             self.initialize_truss(parameters)
@@ -857,7 +853,7 @@ class LinearTwoBarTruss(PlanarTrussGenerator, LinearAnalysis):
             A dictionary containing the configuration for the truss generator.
             If not provided, default parameters are used.
 
-            Default structure:
+            Default structural:
             {
                 'parameters': {
                     'supports': {
@@ -972,13 +968,13 @@ class LinearTwoBarTruss(PlanarTrussGenerator, LinearAnalysis):
 
     def generate_parameters(self, generators):
         """
-        Generates a complete set of parameters for the truss structure using the defined generators.
+        Generates a complete set of parameters for the truss structural using the defined generators.
 
         :param generators (dict):
             Dictionary containing generator functions for each parameter group.
 
         :return (dict):
-            A dictionary containing all generated parameters necessary to define the truss structure.
+            A dictionary containing all generated parameters necessary to define the truss structural.
             Structure:
             {
                 'cell_length': float,
@@ -1045,7 +1041,7 @@ class LinearTwoBarTruss(PlanarTrussGenerator, LinearAnalysis):
         Initializes and defines the truss model in OpenSees based on the provided parameters.
 
         :param parameters (dict):
-            A dictionary containing all necessary parameters to define the truss structure.
+            A dictionary containing all necessary parameters to define the truss structural.
             Structure:
             {
                 'length': float,
@@ -1122,13 +1118,13 @@ class LinearTwoBarTruss(PlanarTrussGenerator, LinearAnalysis):
             If set to -1, the iterator is infinite. Defaults to -1.
 
         :yield (list):
-            A list of basic force responses from each element in the truss structure.
+            A list of basic force responses from each element in the truss structural.
         """
         # Initialize counter
         i = 0
         while i != max_count:
             i += 1
-            # Generate a set of parameters for the truss structure
+            # Generate a set of parameters for the truss structural
             parameters = self.generate_parameters(self._generators)
             # Initialize the truss model in OpenSees with the generated parameters
             self.initialize_truss(parameters)
