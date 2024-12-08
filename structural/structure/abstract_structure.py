@@ -8,7 +8,7 @@ from openseespy import opensees as ops
 
 class AbstractStructure(ABC):
     """
-    Interface for creating and managing structural models in OpenSees.
+    Abstract class for creating and managing structural models in OpenSees.
 
     This abstract base class defines the necessary methods and properties
     for creating, analyzing, and extracting information from structural models.
@@ -80,7 +80,7 @@ class AbstractStructure(ABC):
     @property
     def nodes_displacements(self) -> np.ndarray[Any, dtype[np.float64]]:
         """Get the displacements of all nodes."""
-        return np.array([u_i for idx in ops.getNodeTags() for u_i in ops.nodeDisp(idx)], dtype=np.float64)
+        return np.array([ops.nodeDisp(idx) for idx in ops.getNodeTags()], dtype=np.float64)
 
     @property
     def elements_connectivity(self) -> np.ndarray[Any, dtype[np.float64]]:
@@ -98,17 +98,13 @@ class AbstractStructure(ABC):
         n_dof = self.n_dof
         n_nodes = self.n_nodes
 
-        q = np.zeros(n_dof*n_nodes, dtype=np.float64)
         idx_nodes = ops.getNodeLoadTags()
         load_data = ops.getNodeLoadData()
 
+        q = np.zeros((n_nodes, n_dof), dtype=np.float64)
         for i, idx in enumerate(idx_nodes):
-            # Map the index based on the number of degrees of freedom
             i *= n_dof
-            idx *= n_dof
-
-            # Update the data
-            q[idx:idx + n_dof] = load_data[i:i + n_dof]
+            q[idx, :] = load_data[i:i + n_dof]
 
         return q
 
