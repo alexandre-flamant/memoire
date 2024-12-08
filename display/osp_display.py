@@ -2,6 +2,11 @@ from .utils import *
 import numpy as np
 from openseespy import opensees as ops
 from matplotlib import pyplot as plt
+from matplotlib.path import Path
+
+support_markers = {(1,): (Path([(2, 0), (-1, -3**.5), (-1, 3**.5), (2, 0)], closed=True), 120),
+                   (2,): (Path([(0, 2), (-3**.5, -1), (3**.5, -1), (0, 2)], closed=True), 120),
+                   (1, 2): (Path([(1.5, 1.5), (1.5, -1.5), (-1.5, -1.5), (-1.5, 1.5), (1.5, 1.5)], closed=True), 80)}
 
 
 def display_structure(initial=True, deformed=True, def_scale=50):  # ax):
@@ -30,7 +35,7 @@ def display_structure(initial=True, deformed=True, def_scale=50):  # ax):
             ax.plot([nodes[s][0], nodes[e][0]], [nodes[s][1], nodes[e][1]], c='black', zorder=0)
 
         loads = get_loads()
-        loads /= np.max(loads)
+        loads /= np.max(np.abs(loads))
         loads *= 0.1*d
 
         for i, q in enumerate(loads):
@@ -41,10 +46,15 @@ def display_structure(initial=True, deformed=True, def_scale=50):  # ax):
                     head_starts_at_zero=False, head_width=0.1
                     )
 
+        for node in ops.getFixedNodes():
+            supp = tuple(ops.getFixedDOFs(node))
+            marker, s = support_markers[supp]
+            ax.scatter(*nodes[node], marker=marker, color="green", s=s, zorder=4)
+
     if deformed:
         nodes = get_deformed_node_coordinates(def_scale)
         for s, e in elem_connectivity:
-            ax.plot([nodes[s][0], nodes[e][0]], [nodes[s][1], nodes[e][1]], c='magenta', zorder=4, linewidth=0.5)
+            ax.plot([nodes[s][0], nodes[e][0]], [nodes[s][1], nodes[e][1]], c='magenta', zorder=5, linewidth=0.5)
 
 
 def _create_figure(nodes):

@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from typing import Callable, Any, TypedDict, Dict
 
 import numpy as np
+import yaml
 
 from structural.analysis import AbstractAnalysis
 from structural.structure.abstract_structure import AbstractStructure
@@ -72,16 +73,23 @@ class AbstractGenerator(ABC, Iterable):
     - `r` is generated independently using a normal distribution with specified mean and standard deviation.
     """
 
-    def __init__(self, config: ConfigDict):
+    def __init__(self, config: ConfigDict | str):
         """
         Initialize the generator with the given parameters.
 
         Parameters
         ----------
-        config : ConfigDict
+        config : ConfigDict | str
+            Path to a YAML configuration file.
+            or
             Dictionary containing the number of samples and parameter definitions.
+            If config is a string, it is assumed to be a YAML configuration file path.
         """
-        self.config: ConfigDict = config
+        if isinstance(config, str):
+            with open(config, 'r') as file:
+                self.config = yaml.safe_load(file)
+        else:
+            self.config: ConfigDict = config
 
     @property
     @abstractmethod
@@ -234,8 +242,7 @@ class AbstractGenerator(ABC, Iterable):
         config = self.default_config.copy()
         config.update(self.config['parameters'])
 
-        distribution = {param_name: self.get_distribution(distribution)
-                        for param_name, distribution in config.items()
+        distribution = {param_name: self.get_distribution(distribution) for param_name, distribution in config.items()
                         if "distribution" in distribution}
 
         for _ in range(n_sample):
@@ -250,10 +257,16 @@ class AbstractGenerator(ABC, Iterable):
                     value: float | int = generated[config[param_name]['shared_with']]
                 else:
                     value: float | int = generated[param_name]
+
+                if 'factor' in config[param_name]:
+                    value *= config[param_name]['factor']
+
                 generation_param[param_name] = value
 
             # Run the calculation
             self.structure.generate_model(generation_param)
             self.analysis.run_analysis()
 
-            yield self.construct_result(generation_param)
+            r = self.construct_result(generation_param)
+
+            yield r

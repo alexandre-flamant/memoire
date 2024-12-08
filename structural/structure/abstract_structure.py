@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import numpy as np
 from numpy import dtype
@@ -61,6 +61,22 @@ class AbstractStructure(ABC):
     def n_dim(self) -> int:
         """Get the number of dimensions (2D or 3D)."""
         pass
+
+    @property
+    def supports(self) -> List[List[int | bool]]:
+        """Get the supports locations and their fixed dof"""
+        nodes = ops.getFixedNodes()
+        supports = []
+        for idx in range(self.n_nodes):
+            if idx not in nodes:
+                supports.append([idx, *[False for _ in range(self.n_dof)]])
+                continue
+
+            fixed = ops.getFixedDOFs(idx)
+            fix = [i+1 in fixed for i in range(self.n_dof)]
+            supports.append([idx, *fix])
+
+        return supports
 
     @property
     def n_nodes(self) -> int:
@@ -150,7 +166,7 @@ class AbstractStructure(ABC):
         pass
 
     @property
-    def K(self) -> np.ndarray[Any, dtype[np.float64]]:
+    def stiffness_matrix(self) -> np.ndarray[Any, dtype[np.float64]]:
         """
         Compute the global stiffness matrix for the entire structure.
 
@@ -165,7 +181,7 @@ class AbstractStructure(ABC):
         Example
         -------
         >>> structure = MyStructure()
-        >>> global_stiffness_matrix = structure.K
+        >>> global_stiffness_matrix = structure.stiffness_matrix
         """
 
         # Parameters
