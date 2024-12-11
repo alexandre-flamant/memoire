@@ -30,12 +30,7 @@ generate_structure(params: dict)
     Abstract method to generate the structure based on parameters (to be implemented by subclasses).
 """
 
-from abc import abstractmethod
-from typing import Any
-
 import numpy as np
-from numpy import dtype
-from openseespy import opensees as ops
 
 from .abstract_structure import *
 
@@ -72,7 +67,8 @@ class AbstractPlanarTruss(AbstractStructure):
         """
         return 2
 
-    def _get_r(self, a: float) -> np.ndarray[Any, dtype[np.float64]]:
+    @staticmethod
+    def _get_r(a: float) -> np.ndarray[Any, dtype[np.float64]]:
         """
         Compute the member rotation matrix for a given angle.
 
@@ -89,10 +85,13 @@ class AbstractPlanarTruss(AbstractStructure):
         c = np.cos(a)
         s = np.sin(a)
         return np.array(
-                [[c, s, 0, 0],
-                 [-s, c, 0, 0],
-                 [0, 0, c, s],
-                 [0, 0, -s, c]]
+                [[c, s, 0, 0], [-s, c, 0, 0], [0, 0, c, s], [0, 0, -s, c]]
+                )
+
+    @staticmethod
+    def _compute_k_loc(k: float):
+        return k*np.array(
+                [[1, 0, -1, 0], [0, 0, 0, 0], [-1, 0, 1, 0], [0, 0, 0, 0]]
                 )
 
     def compute_k_loc(self, idx: int) -> np.ndarray[Any, dtype[np.float64]]:
@@ -109,14 +108,11 @@ class AbstractPlanarTruss(AbstractStructure):
         np.ndarray
             The 4x4 local stiffness matrix for the specified element.
         """
-        return ops.basicStiffness(idx)*np.array(
-                [[1, 0, -1, 0],
-                 [0, 0, 0, 0],
-                 [-1, 0, 1, 0],
-                 [0, 0, 0, 0]]
-                )
+        k = ops.basicStiffness(idx)
+        return self._compute_k_loc(ops.basicStiffness(idx))
 
-    def compute_k_global(self, k_loc: np.ndarray[Any, dtype[np.float64]], angle: float) -> np.ndarray[
+    @classmethod
+    def compute_k_global(cls, k_loc: np.ndarray[Any, dtype[np.float64]], angle: float) -> np.ndarray[
         Any, dtype[np.float64]]:
         """
         Transform the local stiffness matrix to the global coordinate system.
@@ -133,7 +129,7 @@ class AbstractPlanarTruss(AbstractStructure):
         np.ndarray
             The global stiffness matrix in the global coordinate system.
         """
-        r = self._get_r(angle)
+        r = cls._get_r(angle)
         return r.T@k_loc@r
 
     @abstractmethod

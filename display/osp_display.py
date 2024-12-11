@@ -1,8 +1,7 @@
-from .utils import *
-import numpy as np
-from openseespy import opensees as ops
 from matplotlib import pyplot as plt
 from matplotlib.path import Path
+
+from .utils import *
 
 support_markers = {(1,): (Path([(2, 0), (-1, -3**.5), (-1, 3**.5), (2, 0)], closed=True), 120),
                    (2,): (Path([(0, 2), (-3**.5, -1), (3**.5, -1), (0, 2)], closed=True), 120),

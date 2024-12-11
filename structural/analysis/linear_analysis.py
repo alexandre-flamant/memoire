@@ -1,5 +1,6 @@
-from .abstract_analysis import AbstractAnalysis
 from openseespy import opensees as ops
+
+from .abstract_analysis import AbstractAnalysis
 
 
 class LinearAnalysis(AbstractAnalysis):

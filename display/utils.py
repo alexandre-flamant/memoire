@@ -1,5 +1,5 @@
-from openseespy import opensees as ops
 import numpy as np
+from openseespy import opensees as ops
 
 
 def get_elem_connectivity():

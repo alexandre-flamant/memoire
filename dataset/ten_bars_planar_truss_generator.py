@@ -15,10 +15,10 @@ class TenBarsPlanarTrussGenerator(AbstractGenerator):
     @property
     def default_config(self) -> Dict[str, Dict[str, str | int | float]]:
         config = {'__load__': {'distribution': 'constant', 'value': 0.},
-                '__area__': {'distribution': 'constant', 'value': 1.e-3},
-                '__young__': {'distribution': 'constant', 'value': 70.e9},
-                'length': {'distribution': 'constant', 'value': 2},
-                'height': {'distribution': 'constant', 'value': 2}, }
+                  '__area__': {'distribution': 'constant', 'value': 1.e-3},
+                  '__young__': {'distribution': 'constant', 'value': 70.e9},
+                  'length': {'distribution': 'constant', 'value': 2},
+                  'height': {'distribution': 'constant', 'value': 2}, }
 
         config.update({f"A_{i}": {'shared_with': '__area__'} for i in range(10)})
         config.update({f"E_{i}": {'shared_with': '__young__'} for i in range(10)})

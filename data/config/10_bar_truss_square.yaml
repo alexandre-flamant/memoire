@@ -1,0 +1,27 @@
+n_sample: 5
+parameters:
+  __young__:
+    distribution: constant
+    value: 70e9
+
+  __area__:
+    distribution: constant
+    value: 10.e-4
+
+  load:
+    distribution: uniform
+    low: 1.e3
+    high: 100.e3
+
+  P_y_4:
+    shared_with: load
+    factor: 1.0
+
+  P_y_5:
+    shared_with: load
+    factor: 1.0
+
+  height:
+    distribution: uniform
+    low: 0.5
+    high: 4.0

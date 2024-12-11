@@ -62,6 +62,26 @@ class AbstractStructure(ABC):
         """Get the number of dimensions (2D or 3D)."""
         pass
 
+    def __elements_length(self, nodes):
+        lengths = []
+        for s_idx, e_idx in [ops.eleNodes(i) for i in ops.getEleTags()]:
+            s = np.array(nodes[s_idx])
+            e = np.array(nodes[e_idx])
+            l = np.dot((e - s), (e - s))**.5
+
+            lengths.append(l)
+        return np.array(lengths)
+
+    @property
+    def initial_elements_length(self) -> np.ndarray:
+        nodes = self.nodes_coordinates
+        return self.__elements_length(nodes)
+
+    @property
+    def deformed_elements_length(self) -> np.ndarray:
+        nodes = self.nodes_coordinates + self.nodes_displacements
+        return self.__elements_length(nodes)
+
     @property
     def supports(self) -> List[List[int | bool]]:
         """Get the supports locations and their fixed dof"""
@@ -73,7 +93,7 @@ class AbstractStructure(ABC):
                 continue
 
             fixed = ops.getFixedDOFs(idx)
-            fix = [i+1 in fixed for i in range(self.n_dof)]
+            fix = [i + 1 in fixed for i in range(self.n_dof)]
             supports.append([idx, *fix])
 
         return supports
@@ -123,6 +143,11 @@ class AbstractStructure(ABC):
             q[idx, :] = load_data[i:i + n_dof]
 
         return q
+
+    @staticmethod
+    @abstractmethod
+    def _get_r(self, a: float) -> np.ndarray[Any, dtype[np.float64]]:
+        pass
 
     @abstractmethod
     def compute_k_loc(self, idx: int) -> np.ndarray[Any, dtype[np.float64]]:

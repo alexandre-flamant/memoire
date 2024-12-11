@@ -1,7 +1,8 @@
 from typing import TypedDict
 
+import torch
+
 from .abstract_planar_truss import *
-from openseespy import opensees as ops
 
 
 class ParamDict(TypedDict):
@@ -91,3 +92,7 @@ class TenBarsPlanarTruss(AbstractPlanarTruss):
             p_y = params[f"P_y_{i}"]
             if p_x != 0 or p_y != 0:
                 ops.load(i, p_x, p_y)
+
+    @staticmethod
+    def construct_k_from_ea(ea: torch.Tensor, length: torch.Tensor):
+        pass
