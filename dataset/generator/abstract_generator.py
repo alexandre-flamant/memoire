@@ -6,8 +6,13 @@ from typing import Callable, Any, TypedDict, Dict
 import numpy as np
 import yaml
 
+from datetime import datetime
 from structural.analysis import AbstractAnalysis
 from structural.structure.abstract_structure import AbstractStructure
+
+import h5py
+import os
+from pathlib import Path
 
 
 class ConfigDict(TypedDict, total=False):
@@ -91,6 +96,9 @@ class AbstractGenerator(ABC, Iterable):
         else:
             self.config: ConfigDict = config
 
+        self.n_sample = self.config['n_sample']
+
+
     @property
     @abstractmethod
     def default_config(self) -> Dict[str, Dict[str, str | int | float]]:
@@ -162,16 +170,52 @@ class AbstractGenerator(ABC, Iterable):
             case _:
                 raise ValueError(f"{config['distribution']} not supported.")
 
-    def save(self):
-        """
-        Save the generated data or results.
+    def save(self, directory=None):
+        if directory is None:
+            class_name = self.structure.__class__.__name__
+            current_date = datetime.now().strftime("%y-%m-%d_%H-%M")
+            directory = f"./data/dataset/{class_name}_{current_date}/"
 
-        Notes
-        -----
-        This method should be implemented in a subclass to define specific
-        save functionality (e.g., saving to a file or database).
-        """
-        pass
+        directory = Path(directory)
+        try:
+            directory.resolve(strict=False)
+        except Exception as e:
+            raise ValueError(f"Invalid directory name '{directory}': {e}")
+
+        if not directory.exists():
+            try:
+                directory.mkdir(parents=True, exist_ok=True)
+                print(f"Directory created: {directory}")
+            except Exception as e:
+                raise IOError(f"Failed to create directory '{directory}': {e}")
+
+        with h5py.File(directory / 'data.hdf5', 'w') as f:
+            datasets = {}
+            for i, data in enumerate(self.__iter__()):
+                for col, value in data.items():
+                    if col not in f:
+                        if isinstance(value, np.ndarray):
+                            shape = (self.n_sample, *value.shape) if value.shape else (n_sample,)
+                            dtype = value.dtype
+                        elif isinstance(value, int):
+                            shape = (self.n_sample,)
+                            dtype = np.int32  # Use np.int64 if larger integers are expected
+                        elif isinstance(value, float):
+                            shape = (self.n_sample,)
+                            dtype = np.float64  # Use float64 for floating-point numbers
+                        elif isinstance(value, str):
+                            shape = (self.n_sample,)
+                            dtype = h5py.string_dtype(encoding="utf-8")  # Use variable-length string dtype
+                        else:
+                            raise ValueError(f"Unsupported data type for key '{col}': {type(value)}")
+                        datasets[col] = f.create_dataset(col, shape=shape, dtype=dtype)
+
+                    if isinstance(value, np.ndarray):
+                        datasets[col][i] = value
+                    elif isinstance(value, (int, float, str)):
+                        datasets[col][i] = value
+
+        print(f"Dataset saved to {directory / 'data.h5'}")
 
     @property
     @abstractmethod
@@ -236,7 +280,7 @@ class AbstractGenerator(ABC, Iterable):
         structural_params_keys = set(self.default_config.keys())
 
         # Number of sample
-        n_sample = self.config["n_sample"]
+        # n_sample = self.config["n_sample"]
 
         # Get the parameters descriptions and functions
         config = self.default_config.copy()
@@ -245,7 +289,7 @@ class AbstractGenerator(ABC, Iterable):
         distribution = {param_name: self.get_distribution(distribution) for param_name, distribution in config.items()
                         if "distribution" in distribution}
 
-        for _ in range(n_sample):
+        for _ in range(self.n_sample):
             # Generate a value for each distribution
             generated = {k: f(1)[0] for k, f in distribution.items()}
 

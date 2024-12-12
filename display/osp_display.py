@@ -8,7 +8,7 @@ support_markers = {(1,): (Path([(2, 0), (-1, -3**.5), (-1, 3**.5), (2, 0)], clos
                    (1, 2): (Path([(1.5, 1.5), (1.5, -1.5), (-1.5, -1.5), (-1.5, 1.5), (1.5, 1.5)], closed=True), 80)}
 
 
-def display_structure(initial=True, deformed=True, def_scale=50):  # ax):
+def display_structure(ax=None, initial=True, deformed=True, def_scale=50):  # ax):
     nodes = None
     if initial:
         nodes = get_node_coordinates()
@@ -25,7 +25,8 @@ def display_structure(initial=True, deformed=True, def_scale=50):  # ax):
     dy = max_y - min_y
     d = max(dx, dy)
 
-    fig, ax = _create_figure(nodes)
+    if ax is None:
+        _, ax = _create_figure(nodes)
 
     if initial:
         nodes = get_node_coordinates()

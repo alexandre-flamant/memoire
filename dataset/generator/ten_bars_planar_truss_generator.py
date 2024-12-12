@@ -4,6 +4,9 @@ from structural.analysis import LinearAnalysis
 from structural.structure import TenBarsPlanarTruss
 from .abstract_generator import AbstractGenerator, ConfigDict
 
+import re
+import numpy as np
+
 
 class TenBarsPlanarTrussGenerator(AbstractGenerator):
 
@@ -36,17 +39,24 @@ class TenBarsPlanarTrussGenerator(AbstractGenerator):
         return self.__analysis
 
     def construct_result(self, params: Dict[str, float | int]) -> Dict[str, float]:
-        r = params.copy()
-        coord = self.structure.nodes_coordinates
-        k = self.structure.stiffness_matrix.reshape(-1)
-        u = self.structure.nodes_displacements
-        n = self.structure.elements_forces
+        keys = params.keys()
 
-        r.update({f'x_{i}': coord[i, 0] for i in range(6)})
-        r.update({f'y_{i}': coord[i, 1] for i in range(6)})
-        r.update({f'u_x_{i}': u[i, 0] for i in range(6)})
-        r.update({f'u_y_{i}': u[i, 1] for i in range(6)})
-        r.update({f"N_{i}": n[i] for i in range(10)})
-        r.update({f"K_{i:03d}": k[i] for i in range(len(k))})
+        keys_a = sorted([s for s in keys if re.match("A_[0-9]*", s)])
+        keys_e = sorted([s for s in keys if re.match("E_[0-9]*", s)])
+        keys_p = sorted([s for s in keys if re.match("P_[x,y]_[0-9]*", s)])
+        keys_p = tuple(zip(keys_p[:len(keys_p) // 2], keys_p[len(keys_p) // 2:]))
+
+        # Numpy data for HFS5 storage
+        r = {
+            'length': params['length'],
+            'height': params['height'],
+            'youngs': np.array([params[k] for k in keys_e]),
+            'areas': np.array([params[k] for k in keys_a]),
+            'loads': np.array([[params[k] for k in ks] for ks in keys_p]),
+            'nodes': self.structure.nodes_coordinates,
+            'nodes_displacements': self.structure.nodes_displacements,
+            'forces': self.structure.elements_forces,
+            'stiffness': self.structure.stiffness_matrix,
+        }
 
         return r

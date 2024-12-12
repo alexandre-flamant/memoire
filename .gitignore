@@ -1,5 +1,2 @@
 .idea/
-
-data/*
-!data/config/
-!data/config/**
+data/dataset/
