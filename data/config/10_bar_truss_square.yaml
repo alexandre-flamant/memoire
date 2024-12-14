@@ -10,8 +10,8 @@ parameters:
 
   load:
     distribution: uniform
-    low: 1.e3
-    high: 100.e3
+    low: -1.e3
+    high: -100.e3
 
   P_y_4:
     shared_with: load

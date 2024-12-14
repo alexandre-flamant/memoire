@@ -90,9 +90,11 @@ class AbstractGenerator(ABC, Iterable):
             Dictionary containing the number of samples and parameter definitions.
             If config is a string, it is assumed to be a YAML configuration file path.
         """
+        self.filepath = None
         if isinstance(config, str):
             with open(config, 'r') as file:
                 self.config = yaml.safe_load(file)
+            self.filepath = Path(config)
         else:
             self.config: ConfigDict = config
 
@@ -170,11 +172,17 @@ class AbstractGenerator(ABC, Iterable):
             case _:
                 raise ValueError(f"{config['distribution']} not supported.")
 
-    def save(self, directory=None):
+    def save(self, directory=None, max_size=None):
         if directory is None:
             class_name = self.structure.__class__.__name__
             current_date = datetime.now().strftime("%y-%m-%d_%H-%M")
-            directory = f"./data/dataset/{class_name}_{current_date}/"
+            if self.filepath is None:
+                directory = f"./data/dataset/{class_name}_{current_date}/"
+            else:
+                directory = f"./data/dataset/{self.filepath.stem}_{current_date}/"
+
+        if max_size is None:
+            max_size = self.n_sample
 
         directory = Path(directory)
         try:
@@ -185,26 +193,28 @@ class AbstractGenerator(ABC, Iterable):
         if not directory.exists():
             try:
                 directory.mkdir(parents=True, exist_ok=True)
-                print(f"Directory created: {directory}")
             except Exception as e:
                 raise IOError(f"Failed to create directory '{directory}': {e}")
 
         with h5py.File(directory / 'data.hdf5', 'w') as f:
             datasets = {}
             for i, data in enumerate(self.__iter__()):
+                if i > (max_size-1):
+                    print(f"Generation stopped at {max_size} samples based on given max_size.")
+                    break
                 for col, value in data.items():
                     if col not in f:
                         if isinstance(value, np.ndarray):
-                            shape = (self.n_sample, *value.shape) if value.shape else (n_sample,)
-                            dtype = value.dtype
+                            shape = (max_size,)
+                            dtype = h5py.vlen_dtype(value.dtype)
                         elif isinstance(value, int):
-                            shape = (self.n_sample,)
+                            shape = (max_size,)
                             dtype = np.int32  # Use np.int64 if larger integers are expected
                         elif isinstance(value, float):
-                            shape = (self.n_sample,)
+                            shape = (max_size,)
                             dtype = np.float64  # Use float64 for floating-point numbers
                         elif isinstance(value, str):
-                            shape = (self.n_sample,)
+                            shape = (max_size,)
                             dtype = h5py.string_dtype(encoding="utf-8")  # Use variable-length string dtype
                         else:
                             raise ValueError(f"Unsupported data type for key '{col}': {type(value)}")
@@ -215,7 +225,7 @@ class AbstractGenerator(ABC, Iterable):
                     elif isinstance(value, (int, float, str)):
                         datasets[col][i] = value
 
-        print(f"Dataset saved to {directory / 'data.h5'}")
+        print(f"Dataset saved to {directory / 'data.hdf5'}")
 
     @property
     @abstractmethod

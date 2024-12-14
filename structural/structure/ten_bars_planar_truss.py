@@ -54,12 +54,12 @@ class TenBarsPlanarTruss(AbstractPlanarTruss):
         height = params["height"]
 
         # Nodes
-        ops.node(0, 0.0, -0.5*height)
-        ops.node(1, length, -0.5*height)
-        ops.node(2, 2.*length, -0.5*height)
-        ops.node(3, 0.0, 0.5*height)
-        ops.node(4, length, 0.5*height)
-        ops.node(5, 2.*length, 0.5*height)
+        ops.node(0, 0.0, 0.5*height)
+        ops.node(1, length, 0.5*height)
+        ops.node(2, 2.*length, 0.5*height)
+        ops.node(3, 0.0, -0.5*height)
+        ops.node(4, length, -0.5*height)
+        ops.node(5, 2.*length, -0.5*height)
 
         # Support
         ops.fix(0, 1, 1)

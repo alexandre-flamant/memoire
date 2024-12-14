@@ -50,13 +50,13 @@ class TenBarsPlanarTrussGenerator(AbstractGenerator):
         r = {
             'length': params['length'],
             'height': params['height'],
-            'youngs': np.array([params[k] for k in keys_e]),
-            'areas': np.array([params[k] for k in keys_a]),
-            'loads': np.array([[params[k] for k in ks] for ks in keys_p]),
-            'nodes': self.structure.nodes_coordinates,
-            'nodes_displacements': self.structure.nodes_displacements,
-            'forces': self.structure.elements_forces,
-            'stiffness': self.structure.stiffness_matrix,
+            'young': np.array([params[k] for k in keys_e]),
+            'area': np.array([params[k] for k in keys_a]),
+            'load': np.array([[params[k] for k in ks] for ks in keys_p]).reshape(-1),
+            'nodes': self.structure.nodes_coordinates.reshape(-1),
+            'nodes_displacement': self.structure.nodes_displacements.reshape(-1),
+            'force': self.structure.elements_forces.reshape(-1),
+            'stiffness': self.structure.stiffness_matrix.reshape(-1),
         }
-
+        
         return r

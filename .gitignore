@@ -1,2 +1,4 @@
 .idea/
-data/dataset/
+data/**
+!data/config
+_runs
