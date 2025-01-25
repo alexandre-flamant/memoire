@@ -1,7 +1,0 @@
-numpy
-pandas
-pytorch
-matplotlib
-pyyaml
-scikit-learn
-h5py
