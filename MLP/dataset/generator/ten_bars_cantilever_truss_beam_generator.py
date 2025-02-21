@@ -1,14 +1,14 @@
 from typing import Dict
 
-from structural.analysis import LinearAnalysis
-from structural.structure import TenBarsCantileverTruss
+from MLP.structural.analysis import LinearAnalysis
+from MLP.structural.structure import TenBarsCantileverTruss
 from .abstract_generator import ConfigDict
 from .abstract_truss_generator import AbstractTrussGenerator
 
 
 class TenBarsCantileverTrussGenerator(AbstractTrussGenerator):
 
-    def __init__(self, config: ConfigDict):
+    def __init__(self, config: ConfigDict | None = None):
         super().__init__(config)
         self.__structure = TenBarsCantileverTruss()
         self.__analysis = LinearAnalysis()

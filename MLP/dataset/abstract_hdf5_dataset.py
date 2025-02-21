@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import List, Iterable
 from abc import ABC, abstractmethod
 from torch.utils.data import Dataset
+import numpy as np
 
 class AbstractHDF5Dataset(Dataset, ABC):
     def __init__(self, filepath):
@@ -16,7 +17,7 @@ class AbstractHDF5Dataset(Dataset, ABC):
         self.filepath = filepath
 
     def __getitem__(self, idx: int | List[int]):
-        if isinstance(idx, int):
+        if np.issubdtype(type(idx), np.integer):
             return self.__getitems__([idx])[0]
         if isinstance(idx, Iterable):
             return self.__getitems__(idx)

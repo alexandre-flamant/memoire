@@ -9,8 +9,8 @@ import h5py
 import numpy as np
 import yaml
 
-from structural.analysis import AbstractAnalysis
-from structural.structure.abstract_structure import AbstractStructure
+from MLP.structural.analysis import AbstractAnalysis
+from MLP.structural.structure.abstract_structure import AbstractStructure
 
 
 class ConfigDict(TypedDict, total=False):
@@ -76,7 +76,7 @@ class AbstractGenerator(ABC, Iterable):
     - `r` is generated independently using a normal distribution with specified mean and standard deviation.
     """
 
-    def __init__(self, config: ConfigDict | str):
+    def __init__(self, config: ConfigDict | str | None):
         """
         Initialize the generator with the given parameters.
 
@@ -89,6 +89,9 @@ class AbstractGenerator(ABC, Iterable):
             If config is a string, it is assumed to be a YAML configuration file path.
         """
         self.filepath = None
+
+        if config is None: config = {}
+
         if isinstance(config, str):
             with open(config, 'r') as file:
                 self.config = yaml.safe_load(file)
@@ -96,7 +99,7 @@ class AbstractGenerator(ABC, Iterable):
         else:
             self.config: ConfigDict = config
 
-        self.n_sample = self.config['n_sample']
+        self.n_sample = self.config['n_sample'] if 'n_sample' in self.config else -1
 
     @property
     @abstractmethod
@@ -178,6 +181,9 @@ class AbstractGenerator(ABC, Iterable):
                 raise ValueError(f"{config['distribution']} not supported.")
 
     def save(self, directory=None, max_size=None, append=False):
+        return self.save_from_iterator(self.__iter__(), directory=directory, max_size=max_size, append=append)
+
+    def save_from_iterator(self, iterator: Iterable, directory=None, max_size=None, append=False):
         if directory is None:
             class_name = self.structure.__class__.__name__
             current_date = datetime.now().strftime("%y-%m-%d_%H-%M")
@@ -204,7 +210,7 @@ class AbstractGenerator(ABC, Iterable):
         with h5py.File(directory / 'data.hdf5', 'a' if append else 'w') as f:
             datasets = {}
             size_init = {}
-            for i, data in enumerate(self.__iter__()):
+            for i, data in enumerate(iterator):
                 if i > (max_size - 1):
                     print(f"Generation stopped at {max_size} samples based on given max_size.")
                     break
@@ -281,7 +287,7 @@ class AbstractGenerator(ABC, Iterable):
         """
         pass
 
-    def __iter__(self):
+    def __iter__(self, config=None, n_sample=1):
         """
         Generate an iterator for the dataset.
 
@@ -300,17 +306,23 @@ class AbstractGenerator(ABC, Iterable):
         # Get the actual structural parameters names
         structural_params_keys = set(self.default_config.keys())
 
-        # Number of sample
-        # n_sample = self.config["n_sample"]
+        # If config is specified we can determine the number of samples as well
+        if config is None:
+            n_sample = self.n_sample
+        else:
+            n_sample = n_sample
 
         # Get the parameters descriptions and functions
-        config = self.default_config.copy()
-        config.update(self.config['parameters'])
+        if config is None:
+            config = self.default_config.copy()
+            config.update(self.config['parameters'])
+        else:
+            config = config.copy()
 
         distribution = {param_name: self.get_distribution(distribution) for param_name, distribution in config.items()
                         if "distribution" in distribution}
 
-        for _ in range(self.n_sample):
+        for _ in range(n_sample):
             # Generate a value for each distribution
             generated = {k: f(1)[0] for k, f in distribution.items()}
 

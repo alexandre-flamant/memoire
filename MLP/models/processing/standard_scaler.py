@@ -1,63 +1,57 @@
 from copy import deepcopy
+from torch import nn
 
 import torch
 
-
-class StandardScaler():
+class StandardScaler(nn.Module):
     def __init__(self, n_features):
         super(StandardScaler, self).__init__()
-        self.__n_features = n_features
-        self.__sum = torch.zeros(self.__n_features)
-        self.__sum2 = torch.zeros(self.__n_features)
-        self.__mean = torch.zeros(self.__n_features)
-        self.__std = torch.zeros(self.__n_features)
-        self.__n = 0
-
-    def to(self, device):
-        self_copy = deepcopy(self)
-        self_copy.__sum = self.__sum.to(device)
-        self_copy.__sum2 = self.__sum2.to(device)
-        self_copy.__mean = self.__mean.to(device)
-        self_copy.__std = self.__std.to(device)
-
-        return self_copy
+        self.n_features = n_features
+        self.register_buffer("sum", torch.zeros(n_features))
+        self.register_buffer("sum2", torch.zeros(n_features))
+        self.register_buffer("mean", torch.zeros(n_features))
+        self.register_buffer("std", torch.zeros(n_features))
+        self.n = 0  # Not a tensor since it's a scalar integer
 
     def fit(self, x: torch.Tensor):
-        self.__sum = torch.zeros(self.__n_features)
-        self.__sum2 = torch.zeros(self.__n_features)
-        self.__mean = torch.zeros(self.__n_features)
-        self.__std = torch.zeros(self.__n_features)
+        """Resets and fits the scaler to the dataset."""
+        self.n = x.shape[0]
+        self._reset_buffers()
+        self._update(x)
 
-        x = x.reshape(-1, self.__n_features)
-        self.__n = x.shape[0]
+    def partial_fit(self, x: torch.Tensor):
+        """Updates the scaler with additional data."""
+        self.n += x.shape[0]
+        self._update(x)
 
-        self.__update(x)
+    def _reset_buffers(self):
+        """Resets internal sum statistics."""
+        self.sum.zero_()
+        self.sum2.zero_()
+        self.mean.zero_()
+        self.std.zero_()
 
-    def partial_fit(self, x):
-        x = x.reshape(-1, self.__n_features)
-        self.__n += x.shape[0]
+    def _update(self, x: torch.Tensor):
+        """Updates the mean and std with new data."""
+        self.sum += x.sum(dim=0)
+        self.sum2 += (x ** 2).sum(dim=0)
+        self.mean.copy_(self.sum / self.n)
+        self.std.copy_(torch.sqrt(self.sum2 / self.n - self.mean ** 2))
 
-        self.__update(x)
+    def transform(self, x: torch.Tensor):
+        """Standardizes the input tensor."""
+        if self.n == 0:
+            raise RuntimeError("StandardScaler has not been fit yet.")
+        return (x - self.mean) / self.std
 
-    def __update(self, x):
-        self.__sum += torch.sum(x, dim=0)
-        self.__sum2 += torch.sum(x * x, dim=0)
-
-        self.__mean = self.__sum / self.__n
-        self.__std = torch.sqrt(self.__sum2 / self.__n - self.__mean ** 2)
-
-    def transform(self, x):
-        if self.__sum is None:
-            raise Exception("Standard scaler has not been fit yet.")
-        return (x - self.__mean) / self.__std
-
-    def inverse_transform(self, x):
-        if self.__sum is None:
-            raise Exception("Standard scaler has not been fit yet.")
-        return (x * self.__std) + self.__mean
+    def inverse_transform(self, x: torch.Tensor):
+        """Inverse transformation to original scale."""
+        if self.n == 0:
+            raise RuntimeError("StandardScaler has not been fit yet.")
+        return x * self.std + self.mean
 
     def __str__(self):
-        return f"StandardScaler(n_features={self.__n_features})\nMean: {self.__mean}\nStd: {self.__std}"
+        return f"StandardScaler(n_features={self.n_features})\nMean: {self.mean}\nStd: {self.std}"
 
     def __repr__(self):
         return self.__str__()
