@@ -8,7 +8,7 @@ from .abstract_truss_generator import AbstractTrussGenerator
 
 class TenBarsCantileverTrussGenerator(AbstractTrussGenerator):
 
-    def __init__(self, config: ConfigDict | None = None):
+    def __init__(self, config: ConfigDict | str | None = None):
         super().__init__(config)
         self.__structure = TenBarsCantileverTruss()
         self.__analysis = LinearAnalysis()
