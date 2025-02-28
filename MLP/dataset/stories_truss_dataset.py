@@ -60,11 +60,11 @@ class SeismicTwoStoriesTrussDataset(AbstractHDF5Dataset):
         data = np.hstack([
             self.truss_height[idx].reshape((-1, 1)) + self.noise_length_fix[idx].reshape((-1, 1)),
             self.truss_width[idx].reshape((-1, 1)) + self.noise_truss_width_fix[idx].reshape((-1, 1)),
-            self.bars_length_init[idx] + self.noise_bars_length_init_fix[idx],
+            self.bars_length_init[idx][:,[8]] + self.noise_bars_length_init_fix[idx][:,[8]],
             self.nodes_displacement[idx][:, [2, 3, 4, 5, 8, 9, 10, 11]] \
             + self.noise_nodes_displacement_fix[idx][:, [2, 3, 4, 5, 8, 9, 10, 11]],
-            self.load[idx].reshape((-1, 1)) + self.noise_load_fix[idx].reshape((-1, 1)),
-            self.bars_strain[idx] + self.noise_bars_strain_fix[idx]
+            self.load[idx].reshape((-1, 1)) * self.noise_load_fix[idx].reshape((-1, 1)),
+            self.bars_strain[idx] * self.noise_bars_strain_fix[idx]
         ])
 
         # Data isolation
@@ -84,3 +84,15 @@ class SeismicTwoStoriesTrussDataset(AbstractHDF5Dataset):
 
     def __len__(self):
         return self.truss_height.__len__()
+
+
+class SeismicTwoStoriesTrussDatasetSingleTarget(SeismicTwoStoriesTrussDataset):
+    def __init__(self, filepath: str,
+                 noise_length: Callable[[int], float] | None = None,
+                 noise_loads: Callable[[int], float] | None = None,
+                 noise_strain: Callable[[int], float] | None = None,
+                 noise_displacement: Callable[[int], float] | None = None,
+                 dtype=torch.float32):
+        super().__init__(filepath, noise_length, noise_loads, noise_strain, noise_displacement, dtype)
+        self.bars_area = self.bars_area[:, 0:1]
+        self.bars_young = self.bars_young[:, 0:1]

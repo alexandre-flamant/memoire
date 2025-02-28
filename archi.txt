@@ -1,0 +1,22 @@
+./
+    architecture
+        MultilayerPerceptron
+    losses
+        StiffnessToLoadLoss
+        StiffnessToDisplacementLoss
+    data
+        configuration
+        data
+    dataset
+        structure
+            analysis
+            tools
+        generator
+        dataset
+    experiments
+        mlp
+        gnn
+    dataset_generation.ipynb
+
+
+
