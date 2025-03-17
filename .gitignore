@@ -1,4 +1,4 @@
 .idea/
-MLP/data/**
-!MLP/data/config
+data/**
+!data/config
 _runs
