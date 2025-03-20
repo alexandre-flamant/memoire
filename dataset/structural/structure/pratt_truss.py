@@ -59,7 +59,7 @@ class PrattTruss(AbstractPlanarTruss):
         area, young = self._get_bar_characteristics(idx_bar)
         ops.uniaxialMaterial('Elastic', idx_bar, young)
         ops.element('Truss', idx_bar, 0, 2 * n_panels - 1, area, idx_bar)
-        self._set_bar_load(idx_start, idx_end, area, volumetric_weight)
+        self._set_bar_load(0, 2 * n_panels - 1, area, volumetric_weight)
         idx_bar += 1
 
         for idx in range(1, n_panels // 2):
@@ -85,7 +85,7 @@ class PrattTruss(AbstractPlanarTruss):
         area, young = self._get_bar_characteristics(idx_bar)
         ops.uniaxialMaterial('Elastic', idx_bar, young)
         ops.element('Truss', idx_bar, n_panels, n_panels + 1, area, idx_bar)
-        self._set_bar_load(idx_start, idx_end, area, volumetric_weight)
+        self._set_bar_load(n_panels, n_panels + 1, area, volumetric_weight)
         idx_bar += 1
 
         # Support
