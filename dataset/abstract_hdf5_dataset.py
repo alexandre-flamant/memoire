@@ -22,7 +22,7 @@ class AbstractHDF5Dataset(Dataset, ABC):
         if isinstance(idx, Iterable):
             return self.__getitems__(idx)
         if isinstance(idx, slice):
-            return self.__getitem__(range(idx.start or 0, idx.stop or self.truss_height, idx.step or 1))
+            return self.__getitem__(range(idx.start or 0, idx.stop or self.__len__(), idx.step or 1))
 
     def __str__(self):
         return f"{self.__class__.__name__} loaded from {self.filepath}"

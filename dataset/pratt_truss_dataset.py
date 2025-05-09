@@ -78,6 +78,22 @@ class FixedPrattTrussDataset(AbstractHDF5Dataset):
     def __len__(self):
         return self.height.__len__()
 
+class FixedPrattTrussDatasetThreeTargets(FixedPrattTrussDataset):
+    def __init__(self,
+                 filepath: str,
+                 f_noise_length: Callable[[int], float] | None = None,
+                 f_noise_loads: Callable[[int], float] | None = None,
+                 f_noise_strain: Callable[[int], float] | None = None,
+                 f_noise_displacement: Callable[[int], float] | None = None,
+                 dtype=torch.float32):
+        super().__init__(filepath=filepath,
+                         f_noise_length=f_noise_length,
+                         f_noise_loads=f_noise_loads,
+                         f_noise_strain=f_noise_strain,
+                         f_noise_displacement=f_noise_displacement,
+                         dtype=dtype)
+        self.bars_area = self.bars_area[:, [0,14, 22]]
+        self.bars_young = self.bars_young[:, [0,14, 22]]
 
 class FixedPrattTrussDatasetSingleTarget(FixedPrattTrussDataset):
     def __init__(self,
