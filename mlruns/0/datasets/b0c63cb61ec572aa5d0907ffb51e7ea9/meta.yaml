@@ -1,0 +1,6 @@
+digest: data/dataset/pratt_truss_bridge_bak/multiple_ea/train_2000.hdf5
+name: '2_000'
+profile: null
+schema: null
+source: data/dataset/pratt_truss_bridge_bak/multiple_ea/train_2000.hdf5
+source_type: file

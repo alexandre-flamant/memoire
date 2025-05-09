@@ -170,6 +170,8 @@ class MLP(nn.Module):
                 return nn.Softplus(**activation_params)
             case 'softsign':
                 return nn.Softsign(**activation_params)
+            case 'identity':
+                return nn.Identity(**activation_params)
             case _:
                 raise ValueError(f"Unsupported activation function: {activation}")
 
