@@ -1,0 +1,22 @@
+n_sample: 50000
+parameters:
+  __young__:
+    distribution: uniform
+    low: 50e9
+    high: 80.e9
+
+  __area__:
+    distribution: uniform
+    low: 0.0075
+    high: 0.03
+
+  n_panels: 8
+
+  height:
+    distribution: constant
+    value: 7.5
+
+  length:
+    distribution: constant
+    value: 60.0
+

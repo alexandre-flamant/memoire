@@ -144,6 +144,7 @@ class AbstractGenerator(ABC, Iterable):
         - "exponential": Requires `beta`.
         - Distributions ending in "_constant" will generate identical values
           for all samples using the base distribution.
+        - Distributions ending in "_int" will generate integer from the distribution
         """
 
         match config["distribution"]:

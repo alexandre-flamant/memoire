@@ -9,6 +9,52 @@ from .abstract_hdf5_dataset import AbstractHDF5Dataset
 
 
 class AbstractTrussDataset(AbstractHDF5Dataset):
+    """
+    Abstract dataset for truss structure data stored in an HDF5 file.
+
+    This class loads various truss-related attributes such as geometry,
+    material properties, and mechanical response from an HDF5 file. It
+    serves as a base class for datasets used in structural simulations
+    or machine learning models involving trusses.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to the HDF5 file containing the dataset.
+    dtype : torch.dtype, optional
+        Data type to which tensors should be cast when returned.
+        Default is `torch.float32`.
+
+    Attributes
+    ----------
+    dtype : torch.dtype
+        The target data type for PyTorch tensors.
+    truss_height : np.ndarray
+        Array of truss heights.
+    truss_length : np.ndarray
+        Array of truss total lengths.
+    nodes_coordinate : np.ndarray
+        Node coordinates.
+    nodes_displacement : np.ndarray
+        Displacement vectors at each node.
+    nodes_load : np.ndarray
+        Load vectors applied to nodes.
+    bars_area : np.ndarray
+        Cross-sectional area of each bar.
+    bars_young : np.ndarray
+        Young's modulus for each bar.
+    bars_force : np.ndarray
+        Internal force in each bar.
+    bars_length_init : np.ndarray
+        Initial (undeformed) length of each bar.
+    bars_elongation : np.ndarray
+        Elongation of each bar.
+    bars_strain : np.ndarray
+        Strain in each bar.
+    stiffness_matrix : np.ndarray
+        Global stiffness matrix of the truss.
+    """
+
     def __init__(self, filepath: str, dtype=torch.float32):
         super().__init__(filepath)
         self.dtype = dtype
@@ -27,4 +73,12 @@ class AbstractTrussDataset(AbstractHDF5Dataset):
             self.stiffness_matrix   = np.vstack(f['stiffness_matrix'][:],   dtype=np.float64)
 
     def __len__(self):
+        """
+        Returns the number of truss samples in the dataset.
+
+        Returns
+        -------
+        int
+            Number of samples in the dataset.
+        """
         return len(self.truss_height)

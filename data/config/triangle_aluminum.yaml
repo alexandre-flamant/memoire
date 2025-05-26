@@ -1,0 +1,26 @@
+n_sample: 50000
+parameters:
+  __young__:
+    distribution: uniform
+    low: 50e9
+    high: 80.e9
+
+  __area__:
+    distribution: uniform
+    low: 0.005
+    high: 0.02
+
+  P_y_1:
+    distribution: uniform
+    low: 0.e3
+    high: -2000.e3
+
+  length:
+    distribution: uniform
+    low: 2.0
+    high: 15.0
+
+  height:
+    distribution: uniform
+    low: 1.0
+    high: 7.5
