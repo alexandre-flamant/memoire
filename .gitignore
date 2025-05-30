@@ -2,3 +2,4 @@
 data/**
 !data/config
 _runs
+__pycache__
