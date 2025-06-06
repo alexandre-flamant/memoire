@@ -32,7 +32,7 @@ class PrattTrussGenerator(AbstractTrussGenerator):
         Dictionary of default parameter distributions and values.
     """
 
-    def __init__(self, config: Dict[str, int | float] | str | None = None, analysis=None):
+    def __init__(self, config: Dict[str, int | float] | str | None = None, analysis=None, bisupported=False):
         """
         Initialize the PrattTrussGenerator with a given configuration and analysis.
 
@@ -44,7 +44,7 @@ class PrattTrussGenerator(AbstractTrussGenerator):
             Structural analysis object.
         """
         super().__init__(config, analysis=analysis)
-        self._structure = PrattTruss()
+        self._structure = PrattTruss(bisupported=bisupported)
 
     @property
     def default_config(self) -> Dict[str, Dict[str, str | int | float]]:

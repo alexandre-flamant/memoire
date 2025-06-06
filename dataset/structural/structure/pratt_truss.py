@@ -38,6 +38,10 @@ class PrattTruss(AbstractPlanarTruss):
             Vertical point load at node i.
     """
 
+    def __init__(self, bisupported=False):
+        super().__init__()
+        self.bisupported = bisupported
+
     def generate_structure(self, params: Dict[str, int | float]) -> None:
         """
         Generate the full Pratt truss structure in OpenSees.
@@ -141,7 +145,10 @@ class PrattTruss(AbstractPlanarTruss):
 
         # Supports
         ops.fix(0, 1, 1)
-        ops.fix(n_panels, 0, 1)
+        if self.bisupported:
+            ops.fix(n_panels, 1, 1)
+        else:
+            ops.fix(n_panels, 0, 1)
 
         self.params[f"P_x_0"] = 0.
         self.params[f"P_y_0"] = 0.

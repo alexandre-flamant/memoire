@@ -76,9 +76,9 @@ class FixedPrattTrussDataset(AbstractHDF5Dataset):
                  f_noise_loads: Callable[[tuple], np.ndarray] | None = None,
                  f_noise_strain: Callable[[tuple], np.ndarray] | None = None,
                  f_noise_displacement: Callable[[tuple], np.ndarray] | None = None,
-                 dtype=torch.float32):
-
+                 dtype=torch.float32, bisupported=False):
         super().__init__(filepath)
+        self.bisupported = bisupported
 
         # Noise configuration
         self.f_noise_length = f_noise_length or (lambda shape: np.ones(shape))
@@ -141,7 +141,11 @@ class FixedPrattTrussDataset(AbstractHDF5Dataset):
         n_nodes = len(self.nodes_coordinate[0]) // 2
 
         data_1 = self.nodes_displacement[idx] * self.noise_nodes_displacement[idx]
-        data_1 = data_1[:, [k for k in range(4 * self.n_panels[0]) if k not in (0, 1, 2 * self.n_panels[0] + 1)]]
+        if self.bisupported:  # Remove displacement on horizontal dof !
+            data_1 = data_1[:, [k for k in range(4 * self.n_panels[0])
+                                if k not in (0, 1, 2 * self.n_panels[0], 2 * self.n_panels[0] + 1)]]
+        else:
+            data_1 = data_1[:, [k for k in range(4 * self.n_panels[0]) if k not in (0, 1, 2 * self.n_panels[0] + 1)]]
         data_2 = self.load[idx] * self.noise_load[idx]
         data_2 = data_2[:, [i for i in range(3, self.n_panels[0] * 2, 2)]]
         data_3 = self.bars_strain[idx] * self.noise_bars_strain[idx]
@@ -195,13 +199,13 @@ class FixedPrattTrussDatasetThreeTargets(FixedPrattTrussDataset):
                  f_noise_loads: Callable[[tuple], np.ndarray] | None = None,
                  f_noise_strain: Callable[[tuple], np.ndarray] | None = None,
                  f_noise_displacement: Callable[[tuple], np.ndarray] | None = None,
-                 dtype=torch.float32):
+                 dtype=torch.float32, bisupported=False):
         super().__init__(filepath=filepath,
                          f_noise_length=f_noise_length,
                          f_noise_loads=f_noise_loads,
                          f_noise_strain=f_noise_strain,
                          f_noise_displacement=f_noise_displacement,
-                         dtype=dtype)
+                         dtype=dtype, bisupported=bisupported)
         self.bars_area = self.bars_area[:, [0, 14, 22]]
         self.bars_young = self.bars_young[:, [0, 14, 22]]
 
@@ -233,12 +237,12 @@ class FixedPrattTrussDatasetSingleTarget(FixedPrattTrussDataset):
                  f_noise_loads: Callable[[tuple], np.ndarray] | None = None,
                  f_noise_strain: Callable[[tuple], np.ndarray] | None = None,
                  f_noise_displacement: Callable[[tuple], np.ndarray] | None = None,
-                 dtype=torch.float32):
+                 dtype=torch.float32, bisupported=False):
         super().__init__(filepath=filepath,
                          f_noise_length=f_noise_length,
                          f_noise_loads=f_noise_loads,
                          f_noise_strain=f_noise_strain,
                          f_noise_displacement=f_noise_displacement,
-                         dtype=dtype)
+                         dtype=dtype, bisupported=bisupported)
         self.bars_area = self.bars_area[:, 0:1]
         self.bars_young = self.bars_young[:, 0:1]
