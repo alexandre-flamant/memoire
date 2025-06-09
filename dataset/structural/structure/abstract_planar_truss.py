@@ -151,3 +151,24 @@ class AbstractPlanarTruss(AbstractStructure):
             A dictionary containing parameters required to define the truss structure.
         """
         pass
+
+    @property
+    def bars_strain(self):
+        strain = []
+        for ele_idx in ops.getEleTags():
+            s_idx, e_idx = ops.eleNodes(ele_idx)
+            s = np.array(ops.nodeCoord(s_idx))
+            e = np.array(ops.nodeCoord(e_idx))
+
+            u_s = np.array(ops.nodeDisp(s_idx))
+            u_e = np.array(ops.nodeDisp(e_idx))
+
+            l0 = np.linalg.norm(e - s)
+            l = (e - s) / l0
+
+            du = ((u_e - u_s) * l).sum()
+
+            strain.append(du / l0)
+
+
+        return np.array(strain)

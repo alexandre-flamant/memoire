@@ -32,7 +32,7 @@ class PrattTrussGenerator(AbstractTrussGenerator):
         Dictionary of default parameter distributions and values.
     """
 
-    def __init__(self, config: Dict[str, int | float] | str | None = None, analysis=None, bisupported=False):
+    def __init__(self, config: Dict[str, int | float] | str | None = None, analysis=None, bisupported=False, structure=None):
         """
         Initialize the PrattTrussGenerator with a given configuration and analysis.
 
@@ -44,7 +44,10 @@ class PrattTrussGenerator(AbstractTrussGenerator):
             Structural analysis object.
         """
         super().__init__(config, analysis=analysis)
-        self._structure = PrattTruss(bisupported=bisupported)
+        if structure is None:
+            self._structure = PrattTruss(bisupported=bisupported)
+        else:
+            self._structure = structure
 
     @property
     def default_config(self) -> Dict[str, Dict[str, str | int | float]]:
@@ -162,10 +165,6 @@ class PrattTrussGenerator(AbstractTrussGenerator):
         )
         keys_p = tuple(zip(keys_p[:len(keys_p) // 2], keys_p[len(keys_p) // 2:]))
 
-        bars_elongation = (
-            self.structure.initial_elements_length - self.structure.deformed_elements_length
-        )
-
         r = {
             'length': params['length'],
             'height': params['height'],
@@ -174,14 +173,15 @@ class PrattTrussGenerator(AbstractTrussGenerator):
             'nodes_coordinate': self.structure.nodes_coordinates.reshape(-1),
             'nodes_displacement': self.structure.nodes_displacements.reshape(-1),
             'nodes_load': np.array(self.structure.loads).reshape(-1),
+            'nodes_external_load': np.array(self.structure.external_load).reshape(-1),
             'bars_area': np.array([params[k] for k in keys_a]),
             'bars_young': np.array([params[k] for k in keys_e]),
             'bars_force': self.structure.elements_forces.reshape(-1),
             'bars_length_init': self.structure.initial_elements_length,
-            'bars_elongation': bars_elongation,
-            'bars_strain': bars_elongation / self.structure.initial_elements_length,
+            'bars_strain': self.structure.bars_strain,
             'stiffness_matrix': self.structure.stiffness_matrix.reshape(-1),
             'connectivity_matrix': self.structure.elements_connectivity.reshape(-1),
+            'support_reactions': self.structure.supports_reactions.reshape(-1),
         }
 
         return r

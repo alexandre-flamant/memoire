@@ -67,7 +67,7 @@ class AbstractStructure(ABC):
         for s_idx, e_idx in [ops.eleNodes(i) for i in ops.getEleTags()]:
             s = np.array(nodes[s_idx])
             e = np.array(nodes[e_idx])
-            l = np.dot((e - s), (e - s))**.5
+            l = np.dot((e - s), (e - s)) ** .5
 
             lengths.append(l)
         return np.array(lengths)
@@ -124,9 +124,18 @@ class AbstractStructure(ABC):
         return np.array([ops.eleNodes(idx) for idx in ops.getEleTags()], dtype=int)
 
     @property
+    def supports_reactions(self) -> np.ndarray[Any, dtype[np.float64]]:
+        ops.reactions()
+        reactions = np.zeros((self.n_nodes, self.n_dof))
+        for i, x, y in self.supports:
+            if x: reactions[i, 0] = ops.nodeReaction(i, 1)
+            if y: reactions[i, 1] = ops.nodeReaction(i, 2)
+        return reactions
+
+    @property
     def elements_forces(self) -> np.ndarray[Any, dtype[np.float64]]:
         """Get the forces in all elements."""
-        return np.array([ops.basicForce(idx) for idx in ops.getEleTags()], dtype=np.float64)
+        return np.array([ops.eleResponse(i, 'axialForce')[0] for i in ops.getEleTags()], dtype=np.float64)
 
     @property
     def loads(self) -> np.ndarray[Any, dtype[np.float64]]:
@@ -219,11 +228,11 @@ class AbstractStructure(ABC):
         elems_angle = np.array([np.arctan2(*v[::-1]) - np.arctan2(0, 1) for v in elems_vec])
 
         # Stiffness matrix
-        K = np.zeros((n_dof*n_nodes, n_dof*n_nodes))
+        K = np.zeros((n_dof * n_nodes, n_dof * n_nodes))
 
         for idx in range(len(elems)):
             # Get element stiffness matrix
-            s_i, e_i = elems[idx]*n_dof
+            s_i, e_i = elems[idx] * n_dof
             angle: float = elems_angle[idx]
 
             k_loc = self.compute_k_loc(idx)
@@ -231,14 +240,14 @@ class AbstractStructure(ABC):
 
             # Assemble global stiffness matrix
             K[s_i: s_i + n_dof, s_i: s_i + n_dof] += k_glob[0:n_dof, 0:n_dof]
-            K[e_i: e_i + n_dof, e_i: e_i + n_dof] += k_glob[n_dof:2*n_dof, n_dof:2*n_dof]
-            K[s_i: s_i + n_dof, e_i: e_i + n_dof] += k_glob[0:n_dof, n_dof:2*n_dof]
-            K[e_i: e_i + n_dof, s_i: s_i + n_dof] += k_glob[n_dof:2*n_dof, 0:n_dof]
+            K[e_i: e_i + n_dof, e_i: e_i + n_dof] += k_glob[n_dof:2 * n_dof, n_dof:2 * n_dof]
+            K[s_i: s_i + n_dof, e_i: e_i + n_dof] += k_glob[0:n_dof, n_dof:2 * n_dof]
+            K[e_i: e_i + n_dof, s_i: s_i + n_dof] += k_glob[n_dof:2 * n_dof, 0:n_dof]
 
         # Boundary condition
         for idx in range(n_nodes):
             for i in ops.getFixedDOFs(idx):
-                dof = n_dof*idx + i - 1  # OSP indices starts at 1
+                dof = n_dof * idx + i - 1  # OSP indices starts at 1
 
                 K[dof, :] = 0.
                 K[:, dof] = 0.
@@ -267,6 +276,7 @@ class AbstractStructure(ABC):
 
         ops.wipe()
         ops.model('basic', '-ndm', self.n_dim, '-ndf', self.n_dof)
+        ops.reactions()
         self.generate_structure(params)
 
     @abstractmethod

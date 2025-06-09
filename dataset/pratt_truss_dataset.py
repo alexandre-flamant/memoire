@@ -95,11 +95,11 @@ class FixedPrattTrussDataset(AbstractHDF5Dataset):
             self.nodes_coordinate = np.vstack(f['nodes_coordinate'][:], dtype=np.float64)
             self.nodes_displacement = np.vstack(f['nodes_displacement'][:], dtype=np.float64)
             self.load = np.vstack(f['nodes_load'][:], dtype=np.float64)
+            self.external_load = np.vstack(f['nodes_external_load'][:], dtype=np.float64)
             self.bars_area = np.vstack(f['bars_area'][:], dtype=np.float64)
             self.bars_young = np.vstack(f['bars_young'][:], dtype=np.float64)
             self.bars_force = np.vstack(f['bars_force'][:], dtype=np.float64)
             self.bars_length_init = np.vstack(f['bars_length_init'][:], dtype=np.float64)
-            self.bars_elongation = np.vstack(f['bars_elongation'][:], dtype=np.float64)
             self.bars_strain = np.vstack(f['bars_strain'][:], dtype=np.float64)
             self.stiffness_matrix = np.vstack(f['stiffness_matrix'][:], dtype=np.float64)
 
@@ -112,7 +112,6 @@ class FixedPrattTrussDataset(AbstractHDF5Dataset):
         noise = self.f_noise_strain(self.bars_force.shape)
         self.noise_bars_force = noise
         self.noise_bars_strain = noise
-        self.noise_bars_elongation = noise
 
     def __getitems__(self, idx: List[int]):
         """
@@ -146,7 +145,7 @@ class FixedPrattTrussDataset(AbstractHDF5Dataset):
                                 if k not in (0, 1, 2 * self.n_panels[0], 2 * self.n_panels[0] + 1)]]
         else:
             data_1 = data_1[:, [k for k in range(4 * self.n_panels[0]) if k not in (0, 1, 2 * self.n_panels[0] + 1)]]
-        data_2 = self.load[idx] * self.noise_load[idx]
+        data_2 = self.external_load[idx] * self.noise_load[idx]
         data_2 = data_2[:, [i for i in range(3, self.n_panels[0] * 2, 2)]]
         data_3 = self.bars_strain[idx] * self.noise_bars_strain[idx]
         data = np.hstack([data_1, data_2, data_3])

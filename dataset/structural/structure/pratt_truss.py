@@ -41,6 +41,7 @@ class PrattTruss(AbstractPlanarTruss):
     def __init__(self, bisupported=False):
         super().__init__()
         self.bisupported = bisupported
+        self._external_loads = None
 
     def generate_structure(self, params: Dict[str, int | float]) -> None:
         """
@@ -70,6 +71,16 @@ class PrattTruss(AbstractPlanarTruss):
             raise Exception("n_panels must be pair")
 
         n_nodes = 2 * n_panels
+        self._external_loads = np.zeros((n_nodes, self.n_dof))
+        self._self_weight_loads = np.zeros((n_nodes, self.n_dof))
+
+        # Parse initial load
+        for i in range(n_nodes):
+            p_x = self.params[f"P_x_{i}"]
+            p_y = self.params[f"P_y_{i}"]
+            if p_x != 0 or p_y != 0:
+                self._external_loads[i, 0] = p_x
+                self._external_loads[i, 1] = p_y
 
         # Nodes
         for idx in range(n_panels + 1):
@@ -158,11 +169,16 @@ class PrattTruss(AbstractPlanarTruss):
         ops.timeSeries("Linear", 1)
         ops.pattern("Plain", 1, 1)
 
-        for i in range(n_nodes):
-            p_x = self.params[f"P_x_{i}"]
-            p_y = self.params[f"P_y_{i}"]
-            if p_x != 0 or p_y != 0:
-                ops.load(i, p_x, p_y)
+        for idx, sx, sy in self.supports:
+            if sx:
+                self._external_loads[idx, 0] = 0.
+                self._self_weight_loads[idx, 0] = 0.
+            if sy:
+                self._external_loads[idx, 1] = 0.
+                self._self_weight_loads[idx, 1] = 0.
+
+        for idx, load in enumerate(self._self_weight_loads + self._external_loads):
+            ops.load(idx, *load)
 
     def _get_bar_characteristics(self, idx):
         """
@@ -208,5 +224,15 @@ class PrattTruss(AbstractPlanarTruss):
         volume = length * area
         q = volume * density
 
-        self.params[f"P_y_{idx_start}"] -= 0.5 * q
-        self.params[f"P_y_{idx_end}"] -= 0.5 * q
+        self._self_weight_loads[idx_start, 1] -= 0.5 * q
+        self._self_weight_loads[idx_end, 1] -= 0.5 * q
+        #self.params[f"P_y_{idx_start}"] -= 0.5 * q
+        #self.params[f"P_y_{idx_end}"] -= 0.5 * q
+
+    @property
+    def external_load(self):
+        return self._external_loads
+
+    @property
+    def self_weight_load(self):
+        return self._self_weight_loads

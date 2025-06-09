@@ -5,8 +5,11 @@ from torch.nn.functional import mse_loss
 
 
 class StiffnessToLoadLoss(Module):
-    def __init__(self) -> None:
+    def __init__(self, scale=1e-6) -> None:
         super(StiffnessToLoadLoss, self).__init__()
+
+        if scale is None: self.scale = 1.
+        else: self.scale = scale
 
     def forward(self, k: torch.Tensor, u: torch.Tensor, q: torch.Tensor) -> torch.Tensor:
         """
@@ -32,6 +35,9 @@ class StiffnessToLoadLoss(Module):
         The losses is computed as the MSE between the predicted force vector (obtained by
         multiplying the stiffness matrix K with the force vector Q) and the true force vector Q.
         """
+        # Scaling
+        k *= self.scale
+        q *= self.scale
 
         # Perform matrix multiplication
         q_pred = torch.matmul(k, u)
