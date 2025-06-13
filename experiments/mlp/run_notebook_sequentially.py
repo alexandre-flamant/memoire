@@ -7,10 +7,10 @@ os.chdir('./experiments/mlp')
 
 notebooks = [f for f in os.listdir('.') if os.path.isfile(f)]
 notebooks = filter(lambda s: s.split('_')[0].isdigit(), notebooks)
-notebooks = filter(lambda s: int(s.split('_')[0]) in {3, 13, 23, 103, 113, 123}, notebooks)
+notebooks = filter(lambda s: int(s.split('_')[0]) in {113, 123}, notebooks)
 notebooks = sorted(notebooks, key=lambda s: int(s.split('_')[0]))
 
-# Run notebooks
+# Run notebooks"
 for nb in notebooks:
     print(f'Running {nb}...')
     subprocess.run([
