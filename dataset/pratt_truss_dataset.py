@@ -102,6 +102,14 @@ class FixedPrattTrussDataset(AbstractHDF5Dataset):
             self.bars_length_init = np.vstack(f['bars_length_init'][:], dtype=np.float64)
             self.bars_strain = np.vstack(f['bars_strain'][:], dtype=np.float64)
             self.stiffness_matrix = np.vstack(f['stiffness_matrix'][:], dtype=np.float64)
+            self.connectivity_matrix = np.vstack(f['connectivity_matrix'][:])
+            self.support_reaction = np.vstack(f['support_reactions'][:])
+
+        self.n_nodes = self.nodes_coordinate.shape[1] // 2
+        self.n_elems = self.bars_area.shape[1]
+
+        self.self_weight_load = self.load - self.external_load
+        self.connectivity_matrix = self.connectivity_matrix.reshape((-1, self.n_elems, 2))
 
         # Noise application
         self.noise_length = self.f_noise_length(self.height.shape)
@@ -148,15 +156,19 @@ class FixedPrattTrussDataset(AbstractHDF5Dataset):
         data_2 = self.external_load[idx] * self.noise_load[idx]
         data_2 = data_2[:, [i for i in range(3, self.n_panels[0] * 2, 2)]]
         data_3 = self.bars_strain[idx] * self.noise_bars_strain[idx]
+
         data = np.hstack([data_1, data_2, data_3])
 
         data = torch.tensor(data, dtype=self.dtype)
         target = torch.tensor(self.bars_area[idx] * self.bars_young[idx], dtype=self.dtype)
-        nodes = torch.tensor(self.nodes_coordinate[idx].reshape((-1, n_nodes, 2)), dtype=self.dtype)
         load = torch.tensor(self.load[idx].reshape((-1, 2 * n_nodes, 1)), dtype=self.dtype)
-        displacements = torch.tensor(self.nodes_displacement[idx].reshape((-1, 2 * n_nodes, 1)), dtype=self.dtype)
+        displacements = torch.tensor(self.nodes_displacement[idx].reshape((-1, 2 * self.n_nodes, 1)), dtype=self.dtype)
+        self_weight = torch.tensor(self.self_weight_load[idx].reshape((-1, self.n_nodes, 2)), dtype=self.dtype)
+        support_reactions = torch.tensor(self.support_reaction[idx].reshape((-1, self.n_nodes, 2)), dtype=self.dtype)
 
-        return [[data[i], target[i], nodes[i], displacements[i], load[i]] for i in range(len(idx))]
+        # x, y, u, q, w, r
+        return [[data[i], target[i], displacements[i], load[i], self_weight[i], support_reactions[i]]
+                for i in range(len(idx))]
 
     def __len__(self):
         """
