@@ -3,3 +3,7 @@ data/**
 !data/config
 _runs
 __pycache__
+mlruns/**
+/figures/media/jupyter/
+/figures/media/Tex/
+/figures/media/texts/
