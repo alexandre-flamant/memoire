@@ -6,10 +6,12 @@ from .stories_truss_dataset import SeismicTwoStoriesTrussDataset, SeismicTwoStor
 from .pratt_truss_dataset import (FixedPrattTrussDataset,
                                   FixedPrattTrussDatasetSingleTarget,
                                   FixedPrattTrussDatasetThreeTargets)
+from .dummy_truss_dataset import DummyTrussDataset
 
 __all__ = ["AbstractHDF5Dataset",
            "TenBarsCantileverTrussDataset", "TenBarsCantileverTrussSingleEADataset",
            "BiSupportedTrussBeamDataset", "BiSupportedTrussBeamSingleEADataset",
            "TwoBarsTrussDataset", "TwoBarsTrussSingleEADataset",
            "SeismicTwoStoriesTrussDataset", "SeismicTwoStoriesTrussDatasetSingleTarget",
-           'FixedPrattTrussDataset', 'FixedPrattTrussDatasetSingleTarget', 'FixedPrattTrussDatasetThreeTargets']
+           'FixedPrattTrussDataset', 'FixedPrattTrussDatasetSingleTarget', 'FixedPrattTrussDatasetThreeTargets',
+           "DummyTrussDataset"]

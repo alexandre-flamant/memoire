@@ -36,8 +36,8 @@ class StiffnessToLoadLoss(Module):
         multiplying the stiffness matrix K with the force vector Q) and the true force vector Q.
         """
         # Scaling
-        k *= self.scale
-        q *= self.scale
+        k = k.clone() * self.scale
+        q = q.clone() * self.scale
 
         # Perform matrix multiplication
         q_pred = torch.matmul(k, u)
