@@ -29,4 +29,4 @@ from .abstract_analysis import AbstractAnalysis
 from .linear_analysis import LinearAnalysis
 
 
-__all__ = [AbstractAnalysis, LinearAnalysis]
+__all__ = ['AbstractAnalysis', 'LinearAnalysis']
