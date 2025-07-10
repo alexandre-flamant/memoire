@@ -3,6 +3,7 @@ import os
 import signal
 import time
 
+
 class MLFlowSession:
     """
     Manages an MLflow tracking server instance using a SQLite database backend.
@@ -24,7 +25,7 @@ class MLFlowSession:
         self.WORKERS = WORKERS
         self.server = None
 
-    def start(self):
+    def start(self, wait_time=10):
         """
         Start the MLflow server with a SQLite backend and file-based artifact storage.
         """
@@ -47,7 +48,7 @@ class MLFlowSession:
                 "--workers", str(self.WORKERS)
             ], preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-            time.sleep(10)
+            if (wait_time > 0): time.sleep(wait_time)
 
             if self.server.poll() is not None:
                 stdout, stderr = self.server.communicate()

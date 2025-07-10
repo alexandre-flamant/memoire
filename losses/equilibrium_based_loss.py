@@ -3,14 +3,13 @@ from torch import nn
 from typing import List, Dict
 
 class NodeEquilibriumLoss(nn.Module):
-    def __init__(self, n_nodes = 16):
+    def __init__(self):
         super().__init__()
-        self.n_nodes = n_nodes
 
     def forward(self, EA:torch.Tensor, e:torch.Tensor, q:torch.Tensor,
                 r:torch.Tensor, m_incidence:List[Dict[int, torch.Tensor]]) -> torch.Tensor:
         n_sample = len(EA)
-        residual: torch.Tensor = torch.zeros((n_sample, self.n_nodes, 2), device=EA.device)
+        residual: torch.Tensor = torch.zeros((n_sample, q.shape[1], 2), device=EA.device)
         for node_idx, node_incidence in enumerate(m_incidence):
             axial_forces: torch.Tensor = EA * e
             for idx, vect in node_incidence.items():
