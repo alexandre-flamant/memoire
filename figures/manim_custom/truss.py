@@ -118,6 +118,7 @@ class Truss(VMobject):
             support_style=None,
             display_loads=True,
             load_style=None,
+            tip_style=None,
             display_load_labels=False,
             load_labels=None,
             load_label_style=None,
@@ -149,7 +150,7 @@ class Truss(VMobject):
         self._display_node_label = display_node_labels
         self._node_labels = node_labels
         self._node_label_style = {'text_class': Text, 'color': self._node_style['color'], 'font_size': 30,
-                                  'prefix': '', 'suffix': '', 'weight': BOLD}
+                                  'prefix': '', 'suffix': ''}
         self._node_label_style.update(node_label_style or {})
         self._node_label_class = self._node_label_style.pop("text_class")
         self._node_label_prefix = self._node_label_style.pop("prefix")
@@ -176,8 +177,10 @@ class Truss(VMobject):
         self._support_style = {"height": .5, "stroke_width": DEFAULT_STROKE_WIDTH, "color": BLACK}
         self._support_style.update(support_style or {})
 
-        self._load_style = {"color": GREEN, "stroke_width": DEFAULT_STROKE_WIDTH, "scale": 1.5}
+        self._load_style = {"color": RED, "stroke_width": DEFAULT_STROKE_WIDTH, "scale": 1.5}
         self._load_style.update(load_style or {})
+        self._tip_style = {'tip_length': .5, 'tip_width': .4}
+        self._tip_style.update(tip_style or {})
         self._load_scale = self._load_style.pop('scale') / max([np.linalg.norm(f) for f in loads.values()], default=1)
         self._display_load_label = display_load_labels
         self._loads_labels = load_labels
@@ -265,13 +268,13 @@ class Truss(VMobject):
         for idx, (fx, fy) in self._loads.items():
             node = nodes[idx]
             vect = self._load_scale * (fx * RIGHT + fy * UP)
-            arrow = Arrow(start=node.get_center(), end=node.get_center() + vect,
-                          buff=0, **self._load_style)
+            arrow = (Line(start=node.get_center(), end=node.get_center() + vect, buff=0, **self._load_style)
+                     .add_tip(**self._tip_style))
             arrow.add_updater(lambda a, n=node: a.shift(n.get_center() - a.get_start()))
             group.add(arrow)
 
     def __add_labels(self, text_class, labels, elements, offsets, group, style, prefix='', suffix=''):
-        labels = ([text_class(f"{prefix}{i}{suffix}", **style) for i in range(len(elements))] if not labels
+        labels = ([text_class(f"{prefix}{i+1}{suffix}", **style) for i in range(len(elements))] if not labels
                   else [text_class(f"{prefix}{label}{suffix}", **style) for label in labels])
 
         for label, element, offset in zip(labels, elements, offsets):
@@ -364,7 +367,7 @@ class Truss(VMobject):
                 self.nodes[i].move_to(original + shift)
         return anim_group if animate else None
 
-    def overlap_deformation(self, scale=1, animate=False):
+    def overlap_deformation(self, scale=1, animate=False, u=None):
         """
         Overlay a transparent deformed truss over the current undeformed structure.
 
@@ -403,7 +406,8 @@ class Truss(VMobject):
             members.add(line)
 
         animations = []
-        for node, disp in zip(nodes, self._displacements):
+        if u is None : u = self._displacements
+        for node, disp in zip(nodes, u):
             vec = scale * np.array([disp[0], disp[1], 0.0])
             if animate:
                 animations.append(node.animate.shift(vec))
@@ -415,7 +419,7 @@ class Truss(VMobject):
         self.add(members, nodes)
         self.update()
 
-        return animations if animate else None
+        return animations if animate else (members, nodes)
 
 
 __all__ = ['Truss']
