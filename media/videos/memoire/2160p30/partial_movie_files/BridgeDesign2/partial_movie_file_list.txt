@@ -1,0 +1,7 @@
+# This file is used internally by FFMPEG.
+file 'file:/Users/aflamant/Documents/courses/2024-2025/mémoire/03-code/memoire/media/videos/memoire/2160p30/partial_movie_files/BridgeDesign2/2652325675_771531609_3097460925.webm'
+file 'file:/Users/aflamant/Documents/courses/2024-2025/mémoire/03-code/memoire/media/videos/memoire/2160p30/partial_movie_files/BridgeDesign2/1811570956_1799848080_1062830681.webm'
+file 'file:/Users/aflamant/Documents/courses/2024-2025/mémoire/03-code/memoire/media/videos/memoire/2160p30/partial_movie_files/BridgeDesign2/1811570956_52346276_3957618440.webm'
+file 'file:/Users/aflamant/Documents/courses/2024-2025/mémoire/03-code/memoire/media/videos/memoire/2160p30/partial_movie_files/BridgeDesign2/1811570956_1897188957_2892843033.webm'
+file 'file:/Users/aflamant/Documents/courses/2024-2025/mémoire/03-code/memoire/media/videos/memoire/2160p30/partial_movie_files/BridgeDesign2/1811570956_439562714_2655801112.webm'
+file 'file:/Users/aflamant/Documents/courses/2024-2025/mémoire/03-code/memoire/media/videos/memoire/2160p30/partial_movie_files/BridgeDesign2/1811570956_548731573_1252616836.webm'

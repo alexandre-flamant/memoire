@@ -359,12 +359,11 @@ class Truss(VMobject):
         """
         anim_group = []
         for i, (ux, uy) in enumerate(self._displacements):
-            original = self._nodes[i]
-            shift = self.nodes[i].get_center() - original + scale * (ux * RIGHT + uy * UP)
+            u = np.array([ux, uy, 0.]) * scale
             if animate:
-                anim_group.append(self.nodes[i].animate.move_to(original + shift))
+                anim_group.append(self.nodes[i].animate.shift(u))
             else:
-                self.nodes[i].move_to(original + shift)
+                self.nodes[i].shift(u)
         return anim_group if animate else None
 
     def overlap_deformation(self, scale=1, animate=False, u=None):
