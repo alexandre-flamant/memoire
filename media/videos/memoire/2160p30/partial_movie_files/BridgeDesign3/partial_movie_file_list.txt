@@ -1,3 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/Users/aflamant/Documents/courses/2024-2025/mémoire/03-code/memoire/media/videos/memoire/2160p30/partial_movie_files/BridgeDesign3/2652325675_2307575079_3659272478.webm'
-file 'file:/Users/aflamant/Documents/courses/2024-2025/mémoire/03-code/memoire/media/videos/memoire/2160p30/partial_movie_files/BridgeDesign3/1811570956_1873583448_1052495459.webm'

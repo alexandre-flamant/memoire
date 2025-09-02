@@ -1,4 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/Users/aflamant/Documents/courses/2024-2025/mémoire/03-code/memoire/figures/media/videos/figures/720p30/partial_movie_files/ArrowsToSquare/2016333726_980650408_223132457.webm'
-file 'file:/Users/aflamant/Documents/courses/2024-2025/mémoire/03-code/memoire/figures/media/videos/figures/720p30/partial_movie_files/ArrowsToSquare/543634251_1834730546_2097907059.webm'
-file 'file:/Users/aflamant/Documents/courses/2024-2025/mémoire/03-code/memoire/figures/media/videos/figures/720p30/partial_movie_files/ArrowsToSquare/543634251_2872842549_2760273678.webm'

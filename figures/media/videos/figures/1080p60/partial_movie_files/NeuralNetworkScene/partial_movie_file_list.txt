@@ -1,3 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/Users/aflamant/Documents/courses/2024-2025/mémoire/03-code/memoire/figures/media/videos/figures/1080p60/partial_movie_files/NeuralNetworkScene/3977891868_989550764_223132457.webm'
-file 'file:/Users/aflamant/Documents/courses/2024-2025/mémoire/03-code/memoire/figures/media/videos/figures/1080p60/partial_movie_files/NeuralNetworkScene/2852726489_2678054126_3311472386.webm'
